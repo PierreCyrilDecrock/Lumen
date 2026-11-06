@@ -43,38 +43,45 @@ body {
   touch-action: none;
 }
 
-.fullscreen {
-  position: fixed;
-  inset: 0;
-  cursor: crosshair;
+@media (prefers-reduced-motion: reduce) {
+  .icon-button:active:not(:disabled) {
+    transform: none;
+  }
 }
 
-/* Step 3 render demo: header, canvas, settings panel. */
-body.demo {
+/* Page layout: header (HUD), board, optional settings panel. */
+body.app {
   display: flex;
   flex-direction: column;
+  height: 100vh;
   height: 100dvh;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0
     env(safe-area-inset-left, 0px);
 }
 
-.demo-header {
-  display: flex;
+.app-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px;
-  padding: 4px 16px;
-  min-height: 48px;
+  gap: 8px;
+  padding: 4px 8px 4px 16px;
+  min-height: 52px;
 }
 
-.demo-header h1 {
-  flex: 1;
+.app-header h1 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   text-align: center;
+  white-space: nowrap;
 }
 
-.demo-back {
+.app-brand {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.app-link {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -82,17 +89,60 @@ body.demo {
   text-decoration: none;
 }
 
-.demo-hint {
-  color: var(--muted);
-  font-size: 13px;
+.app-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
-.demo-stage {
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--cyan);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.icon-button svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: #0d1424;
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.icon-button:disabled {
+  color: #3a4558;
+  cursor: default;
+}
+
+.app-stage {
   flex: 1;
   min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.demo-panel {
+.app-stage:has(+ .app-panel) {
+  padding-bottom: 0;
+}
+
+.app-panel {
   display: grid;
   gap: 4px 16px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

@@ -15,13 +15,45 @@
       crossorigin
     />
   </head>
-  <body>
-    <canvas
-      id="game"
-      class="game-canvas fullscreen"
-      role="img"
-      aria-label="Lumen, plateau de jeu"
-    ></canvas>
+  <body class="app">
+    <header class="app-header">
+      <span class="app-brand">Lumen</span>
+      <h1>Le Zigzag</h1>
+      <div class="app-actions">
+        <button
+          id="undo"
+          class="icon-button"
+          type="button"
+          aria-label="Annuler"
+          title="Annuler (Ctrl+Z)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 14 4 9l5-5" />
+            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+          </svg>
+        </button>
+        <button
+          id="redo"
+          class="icon-button"
+          type="button"
+          aria-label="Rétablir"
+          title="Rétablir (Ctrl+Maj+Z)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 14 5-5-5-5" />
+            <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <main class="app-stage">
+      <canvas
+        id="game"
+        class="game-canvas"
+        role="img"
+        aria-label="Plateau : tournez et déplacez les miroirs pour guider la lumière jusqu'à la cible"
+      ></canvas>
+    </main>
     <noscript>Lumen a besoin de JavaScript pour fonctionner.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>

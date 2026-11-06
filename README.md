@@ -2,7 +2,18 @@
 
 Jeu de puzzle sur la lumière (réflexion, réfraction, diffusion, dispersion), jouable dans le navigateur sur mobile et sur ordinateur.
 
-> État : étape 3 du [plan de développement](docs/plan-de-developpement.md). Moteur de réflexion testé et rendu de la lumière. La page `demo/` montre « Le Zigzag » avec deux curseurs (faisceau, impacts) ; la touche D affiche le temps de frame.
+> État : étape 4 du [plan de développement](docs/plan-de-developpement.md). La page d'accueil est « Le Zigzag » jouable : tournez et déplacez les miroirs pour guider la lumière jusqu'à la cible. La page `demo/` ajoute les curseurs de rendu.
+
+## Commandes de jeu
+
+| Action                                     | Tactile / souris                    | Clavier                            |
+| ------------------------------------------ | ----------------------------------- | ---------------------------------- |
+| Sélectionner un miroir                     | Toucher ou cliquer le miroir        |                                    |
+| Tourner (pas de 15°)                       | Glisser la poignée ou l'anneau cyan | R / Maj+R, flèches gauche / droite |
+| Déplacer (miroir avec un anneau au centre) | Glisser le miroir                   |                                    |
+| Annuler / Rétablir                         | Boutons en haut à droite            | Ctrl+Z / Ctrl+Maj+Z (ou Ctrl+Y)    |
+| Désélectionner                             | Toucher une zone vide               | Échap                              |
+| Temps de frame                             |                                     | D                                  |
 
 ## Lancer
 

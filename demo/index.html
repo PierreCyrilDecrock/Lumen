@@ -14,16 +14,41 @@
       crossorigin
     />
   </head>
-  <body class="demo">
-    <header class="demo-header">
-      <a class="demo-back" href="../">← Lumen</a>
+  <body class="app">
+    <header class="app-header">
+      <a class="app-brand app-link" href="../">← Lumen</a>
       <h1>Le Zigzag</h1>
-      <span class="demo-hint">D : temps de frame</span>
+      <div class="app-actions">
+        <button
+          id="undo"
+          class="icon-button"
+          type="button"
+          aria-label="Annuler"
+          title="Annuler (Ctrl+Z)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 14 4 9l5-5" />
+            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+          </svg>
+        </button>
+        <button
+          id="redo"
+          class="icon-button"
+          type="button"
+          aria-label="Rétablir"
+          title="Rétablir (Ctrl+Maj+Z)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 14 5-5-5-5" />
+            <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+          </svg>
+        </button>
+      </div>
     </header>
-    <div class="demo-stage">
+    <main class="app-stage">
       <canvas id="game" class="game-canvas" role="img" aria-label="Niveau Le Zigzag"></canvas>
-    </div>
-    <form class="demo-panel" aria-label="Réglages du rendu">
+    </main>
+    <form class="app-panel" aria-label="Réglages du rendu">
       <label class="slider">
         <span class="slider-label">Faisceau</span>
         <input id="beam" type="range" min="0" max="100" step="1" />

@@ -86,3 +86,49 @@ export function rayCircleDistance(
   const t = -b - Math.sqrt(disc);
   return t > EPSILON_DISTANCE ? t : Infinity;
 }
+
+/** Distance from point (px, py) to segment [a, b]. */
+export function pointSegmentDistance(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const sx = bx - ax;
+  const sy = by - ay;
+  const len2 = sx * sx + sy * sy;
+  let t = len2 > 0 ? ((px - ax) * sx + (py - ay) * sy) / len2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return Math.hypot(px - (ax + t * sx), py - (ay + t * sy));
+}
+
+/** Shortest distance between segments [a, b] and [c, d]; 0 when they cross. */
+export function segmentSegmentDistance(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  dx: number,
+  dy: number,
+): number {
+  const d1 = orient(cx, cy, dx, dy, ax, ay);
+  const d2 = orient(cx, cy, dx, dy, bx, by);
+  const d3 = orient(ax, ay, bx, by, cx, cy);
+  const d4 = orient(ax, ay, bx, by, dx, dy);
+  if (d1 * d2 < 0 && d3 * d4 < 0) return 0;
+  return Math.min(
+    pointSegmentDistance(ax, ay, cx, cy, dx, dy),
+    pointSegmentDistance(bx, by, cx, cy, dx, dy),
+    pointSegmentDistance(cx, cy, ax, ay, bx, by),
+    pointSegmentDistance(dx, dy, ax, ay, bx, by),
+  );
+}
+
+/** Sign of the turn a -> b -> p (cross product). */
+function orient(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
+  return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+}

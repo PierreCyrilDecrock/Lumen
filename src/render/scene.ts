@@ -3,6 +3,7 @@ import type { Settings } from '../game/settings';
 import type { GameCanvas } from './canvas';
 import { HaloLayer } from './halo';
 import { drawEmitter, drawMirror, drawTarget, drawWall } from './pieces';
+import { drawAngleLabel, drawRotationRing, type SelectionView } from './selection';
 import { makeGlowSprite, makeImpactSprite } from './sprites';
 import { AMBER, BACKGROUND, BEAM_CORE_COLOR, BEAM_CORE_WIDTH } from './theme';
 
@@ -39,8 +40,11 @@ export class SceneRenderer {
     this.halo.invalidate();
   }
 
-  /** @param time Seconds since start, drives the target pulse. */
-  draw(time: number): void {
+  /**
+   * @param time Seconds since start, drives the target pulse.
+   * @param selection Player selection to overlay, if any.
+   */
+  draw(time: number, selection?: SelectionView): void {
     const { gc } = this;
     const ctx = gc.ctx;
     gc.useDeviceSpace();
@@ -54,7 +58,13 @@ export class SceneRenderer {
 
     gc.useLogicalSpace();
     for (const wall of level.walls) drawWall(ctx, wall);
-    for (const mirror of level.mirrors) drawMirror(ctx, mirror);
+    const sel = selection && selection.selected >= 0 ? selection : null;
+    for (let i = 0; i < level.mirrors.length; i++) {
+      const isSelected = sel !== null && sel.selected === i;
+      drawMirror(ctx, level.mirrors[i]!, isSelected ? sel.bounce : 1, isSelected);
+    }
+    const selectedMirror = sel ? level.mirrors[sel.selected] : undefined;
+    if (sel && selectedMirror && sel.rotatable) drawRotationRing(ctx, selectedMirror, sel);
     for (let i = 0; i < level.targets.length; i++) {
       drawTarget(ctx, level.targets[i]!, trace.targetsHit[i] === true);
     }
@@ -63,6 +73,9 @@ export class SceneRenderer {
     this.drawCore();
     gc.useLogicalSpace();
     for (const emitter of level.emitters) drawEmitter(ctx, emitter);
+    if (sel && selectedMirror && sel.rotatable) {
+      drawAngleLabel(ctx, selectedMirror, sel, trace.segments, level.width, level.height);
+    }
   }
 
   private drawLight(time: number): void {

@@ -1,23 +1,14 @@
 import './style.css';
-import { TraceResult, traceRays } from './engine';
-import { FrameStats } from './game/frame-stats';
-import { GameLoop } from './game/loop';
+import { startApp } from './app';
 import { clamp01, createSettings, followReducedMotion, type Settings } from './game/settings';
-import { ZIGZAG } from './levels';
-import { GameCanvas } from './render/canvas';
-import { DebugOverlay } from './render/debug';
-import { SceneRenderer } from './render/scene';
+import { ZIGZAG, cloneLevel } from './levels';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
 if (!canvas) throw new Error('Canvas #game introuvable');
+document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 const settings = createSettings();
 followReducedMotion(settings);
-
-const gc = new GameCanvas(canvas);
-const scene = new SceneRenderer(gc, settings);
-const trace = traceRays(ZIGZAG, {}, new TraceResult());
-scene.setScene(ZIGZAG, trace);
 
 bindSlider('beam', settings, 'beamIntensity');
 bindSlider('impact', settings, 'impactIntensity');
@@ -29,25 +20,7 @@ if (motion) {
   });
 }
 
-const stats = new FrameStats();
-const debug = new DebugOverlay();
-debug.bindKey();
-void document.fonts.load('600 16px "Space Grotesk"').catch(() => undefined);
-
-let time = 0;
-new GameLoop({
-  update: (dt) => {
-    stats.begin(performance.now());
-    time += dt;
-  },
-  render: () => {
-    gc.syncSize();
-    scene.draw(time);
-    const now = performance.now();
-    stats.end(now);
-    debug.draw(gc, stats, now);
-  },
-}).start();
+startApp(canvas, cloneLevel(ZIGZAG), settings);
 
 /** Binds a 0-100 range input to a 0-1 setting, live. */
 function bindSlider(id: string, target: Settings, key: 'beamIntensity' | 'impactIntensity'): void {

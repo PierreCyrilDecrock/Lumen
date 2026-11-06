@@ -2,6 +2,7 @@ import type { Emitter, Mirror, Target, Wall } from '../engine';
 import { DEG_TO_RAD } from '../engine';
 import {
   AMBER,
+  CYAN,
   EMITTER_BODY,
   EMITTER_LINE,
   MIRROR_BACK,
@@ -42,12 +43,32 @@ export function drawWall(ctx: CanvasRenderingContext2D, wall: Wall): void {
   ctx.restore();
 }
 
-export function drawMirror(ctx: CanvasRenderingContext2D, mirror: Mirror): void {
+/**
+ * @param scale Drop bounce (1 = rest).
+ * @param selected Draws a cyan underlay.
+ */
+export function drawMirror(
+  ctx: CanvasRenderingContext2D,
+  mirror: Mirror,
+  scale = 1,
+  selected = false,
+): void {
   const half = mirror.length / 2;
   ctx.save();
   ctx.translate(mirror.x, mirror.y);
   ctx.rotate(mirror.angle * DEG_TO_RAD);
+  if (scale !== 1) ctx.scale(scale, scale);
   ctx.lineCap = 'round';
+  if (selected) {
+    ctx.beginPath();
+    ctx.moveTo(-half, 0);
+    ctx.lineTo(half, 0);
+    ctx.strokeStyle = CYAN;
+    ctx.globalAlpha = 0.35;
+    ctx.lineWidth = MIRROR_WIDTH + 6;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   // Local frame: the mirror lies on the x axis, its front faces +y.
   if (mirror.doubleSided === false) {
     ctx.beginPath();
@@ -71,6 +92,16 @@ export function drawMirror(ctx: CanvasRenderingContext2D, mirror: Mirror): void 
   ctx.strokeStyle = MIRROR_SHINE;
   ctx.lineWidth = 1.6;
   ctx.stroke();
+  // Movable mirrors carry a small grip ring at their centre.
+  if (mirror.movable === true) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = EMITTER_BODY;
+    ctx.fill();
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
