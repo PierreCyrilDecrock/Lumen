@@ -1,0 +1,6 @@
+dist
+coverage
+node_modules
+package-lock.json
+public/fonts
+docs/plan-de-developpement.md
