@@ -49,7 +49,7 @@ export class GameCanvas {
     const rect = this.canvas.getBoundingClientRect();
     this.rectLeft = rect.left;
     this.rectTop = rect.top;
-    this.readSafeArea();
+    this.readSafeArea(rect);
     const v = computeViewport(
       this.viewport,
       rect.width,
@@ -83,12 +83,18 @@ export class GameCanvas {
     this.ctx.setTransform(k, 0, 0, k, v.dpr * v.offsetX, v.dpr * v.offsetY);
   }
 
-  private readSafeArea(): void {
+  /** Safe-area insets that actually overlap the canvas (it may not fill the screen). */
+  private readSafeArea(rect: DOMRect): void {
     const style = getComputedStyle(this.safeProbe);
-    this.safe.top = parseFloat(style.paddingTop) || 0;
-    this.safe.right = parseFloat(style.paddingRight) || 0;
-    this.safe.bottom = parseFloat(style.paddingBottom) || 0;
-    this.safe.left = parseFloat(style.paddingLeft) || 0;
+    const top = parseFloat(style.paddingTop) || 0;
+    const right = parseFloat(style.paddingRight) || 0;
+    const bottom = parseFloat(style.paddingBottom) || 0;
+    const left = parseFloat(style.paddingLeft) || 0;
+    const root = document.documentElement;
+    this.safe.top = Math.max(0, top - rect.top);
+    this.safe.left = Math.max(0, left - rect.left);
+    this.safe.bottom = Math.max(0, bottom - (root.clientHeight - rect.bottom));
+    this.safe.right = Math.max(0, right - (root.clientWidth - rect.right));
   }
 
   /** Re-arms a media query on each DPR change (zoom, moving to another screen). */

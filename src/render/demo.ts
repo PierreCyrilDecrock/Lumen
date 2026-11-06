@@ -1,12 +1,14 @@
 import type { GameCanvas } from './canvas';
 import type { DemoState } from '../game/demo';
+import {
+  BACKGROUND,
+  CYAN,
+  FONT_FAMILY,
+  TEXT as TITLE_COLOR,
+  TEXT_MUTED as SUBTITLE_COLOR,
+} from './theme';
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH } from './viewport';
 
-export const BACKGROUND = '#02030A';
-const TITLE_COLOR = '#EAF6FF';
-const SUBTITLE_COLOR = '#8A93A6';
-const CYAN = '#8FEFFF';
-const FONT_FAMILY = '"Space Grotesk", system-ui, sans-serif';
 const GLOW_RADIUS = 28;
 
 /** Draws the step-1 demo screen. Allocation-free after the first frame. */

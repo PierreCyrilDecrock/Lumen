@@ -1,2 +1,2 @@
-/** Level data (JSON) and schema. Filled in from step 5. */
-export {};
+/** Level data and schema. The JSON format arrives in step 5. */
+export { ZIGZAG } from './demo';

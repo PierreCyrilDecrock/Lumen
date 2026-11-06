@@ -12,6 +12,7 @@
   --text: #eaf6ff;
   --cyan: #8fefff;
   --amber: #ffb84d;
+  --muted: #8a93a6;
   font-family: 'Space Grotesk', system-ui, sans-serif;
 }
 
@@ -35,14 +36,107 @@ body {
   user-select: none;
 }
 
-#game {
-  position: fixed;
-  inset: 0;
+.game-canvas {
+  display: block;
   width: 100%;
   height: 100%;
-  display: block;
   touch-action: none;
+}
+
+.fullscreen {
+  position: fixed;
+  inset: 0;
   cursor: crosshair;
+}
+
+/* Step 3 render demo: header, canvas, settings panel. */
+body.demo {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0
+    env(safe-area-inset-left, 0px);
+}
+
+.demo-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 16px;
+  min-height: 48px;
+}
+
+.demo-header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.demo-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.demo-hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.demo-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.demo-panel {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #1a2233;
+  background: #050812;
+}
+
+.slider,
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.slider-label {
+  width: 72px;
+}
+
+.slider input {
+  flex: 1;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--cyan);
+}
+
+.slider output {
+  width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--cyan);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 /* Resolves safe-area insets to pixels for the canvas layout code. */

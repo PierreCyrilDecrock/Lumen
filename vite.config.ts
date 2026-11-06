@@ -7,6 +7,9 @@ export default defineConfig({
     target: 'es2022',
     outDir: 'dist',
     assetsInlineLimit: 0,
+    rollupOptions: {
+      input: { main: 'index.html', demo: 'demo/index.html' },
+    },
   },
   test: {
     include: ['tests/**/*.test.ts'],

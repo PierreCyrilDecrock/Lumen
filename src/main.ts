@@ -4,6 +4,8 @@ import { DemoRenderer } from './render/demo';
 import { GameLoop } from './game/loop';
 import { InputLayer } from './game/input';
 import { DemoState } from './game/demo';
+import { FrameStats } from './game/frame-stats';
+import { DebugOverlay } from './render/debug';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
 if (!canvas) throw new Error('Canvas #game introuvable');
@@ -27,10 +29,20 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 // Load the self-hosted font before the first frames so the title does not swap.
 void document.fonts.load('600 64px "Space Grotesk"').catch(() => undefined);
 
+const stats = new FrameStats();
+const debug = new DebugOverlay();
+debug.bindKey();
+
 new GameLoop({
-  update: (dt) => state.update(dt),
+  update: (dt) => {
+    stats.begin(performance.now());
+    state.update(dt);
+  },
   render: () => {
     gc.syncSize();
     renderer.draw(state);
+    const now = performance.now();
+    stats.end(now);
+    debug.draw(gc, stats, now);
   },
 }).start();

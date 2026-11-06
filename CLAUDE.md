@@ -47,3 +47,5 @@ Les effets ne doivent jamais nuire à la lecture des faisceaux. Jamais de rayon 
 - ESLint interdit à `src/engine/` d'importer `render/`, `ui/`, `game/`, `storage/` et d'utiliser les globales DOM.
 - Fichiers de `public/` : référencés avec `/…` dans les sources, Vite les réécrit en chemins relatifs au build (`base: './'`). Ne jamais écrire de chemin absolu en dur ailleurs.
 - Pas d'allocation dans les boucles de tracé et de rendu ; les objets d'événement de pointeur sont réutilisés.
+- Rendu (`src/render/scene.ts`) : fond, pièces, lumière additive (halos en cache dans `halo.ts`, sprites d'impact), puis cœur du rayon en dernier. Le cœur fait 3 unités logiques, blanc opaque, et ne lit aucun réglage.
+- Angles en degrés, 0° vers +x, sens horaire à l'écran (y vers le bas) : « \\ » = 45°, « / » = 135°.
