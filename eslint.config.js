@@ -23,7 +23,11 @@ export default tseslint.config(
       ],
     },
   },
-  { files: ['**/*.js'], ...tseslint.configs.disableTypeChecked },
+  { files: ['**/*.js', '**/*.mjs'], ...tseslint.configs.disableTypeChecked },
+  {
+    files: ['scripts/**'],
+    languageOptions: { globals: { ...globals.node, ...globals.serviceworker } },
+  },
   {
     // The optical engine stays pure: no DOM, no Canvas, no rendering or UI code.
     files: ['src/engine/**/*.ts'],

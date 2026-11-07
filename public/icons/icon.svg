@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#02030A"/>
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+  <g stroke-linecap="round" fill="none">
+    <path d="M60 300 L214 256" stroke="#9fd8ff" stroke-width="22" opacity="0.35" filter="url(#glow)"/>
+    <path d="M60 300 L214 256" stroke="#ffffff" stroke-width="12"/>
+    <g stroke-width="11">
+      <path d="M290 262 L452 222" stroke="#FF4D5E"/>
+      <path d="M290 268 L452 260" stroke="#FF9F43"/>
+      <path d="M290 274 L452 298" stroke="#FFE14D"/>
+      <path d="M290 280 L452 336" stroke="#5BE37D"/>
+      <path d="M290 286 L452 374" stroke="#4DA3FF"/>
+      <path d="M290 292 L452 412" stroke="#B58CFF"/>
+    </g>
+  </g>
+  <path d="M256 128 L352 352 L160 352 Z" fill="rgba(200,220,255,0.08)" stroke="#e8f2ff" stroke-width="8" stroke-linejoin="round"/>
+</svg>

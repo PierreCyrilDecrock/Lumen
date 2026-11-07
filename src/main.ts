@@ -57,3 +57,10 @@ function vibrate(ms: number): void {
     // Some browsers throw when vibration is blocked: it is only a nicety.
   }
 }
+
+// Installable version: offline cache, replaced by each new version (production only).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => undefined);
+  });
+}

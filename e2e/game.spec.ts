@@ -90,3 +90,26 @@ test('le niveau 1 se joue au clavier', async ({ page }, info) => {
   for (let i = 0; i < 3; i++) await page.keyboard.press('r');
   await expect(page.locator('#victory')).toBeVisible();
 });
+
+test('fonctionne hors ligne après une première visite', async ({ page, context }, info) => {
+  test.skip(info.project.name !== 'ordinateur', 'Une seule fois suffit');
+  await page.goto('./');
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload(); // Now controlled by the service worker.
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('.menu-title')).toHaveText('Lumen');
+  await page.locator('#menu-levels').click();
+  await expect(page.locator('[data-level="r01"]')).toBeVisible();
+  await context.setOffline(false);
+});
+
+test('le manifeste de la version installable est servi', async ({ request }) => {
+  const response = await request.get('manifest.webmanifest');
+  expect(response.ok()).toBe(true);
+  const manifest = (await response.json()) as { display: string; background_color: string };
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.background_color).toBe('#02030A');
+});

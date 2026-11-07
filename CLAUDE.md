@@ -41,7 +41,7 @@ Les effets ne doivent jamais nuire à la lecture des faisceaux. Jamais de rayon 
 
 ## Notes de travail
 
-- Plan complet en 11 étapes : `docs/plan-de-developpement.md`. Une étape à la fois, puis tag `v0.N`.
+- Plan complet en 11 étapes : `docs/plan-de-developpement.md` (toutes réalisées).
 - Commandes : `npm run dev`, `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`.
 - Repère logique fixe 390 × 560 (`src/render/viewport.ts`) : toutes les coordonnées de jeu et de niveau sont dans ce repère.
 - ESLint interdit à `src/engine/` d'importer `render/`, `ui/`, `game/`, `storage/` et d'utiliser les globales DOM.
@@ -59,3 +59,4 @@ Les effets ne doivent jamais nuire à la lecture des faisceaux. Jamais de rayon 
 - Dispersion : `Prism` (triangle équilatéral) divise la lumière blanche en 6 bandes (`SPECTRUM`, indices 1,45 à 1,73, exagérés exprès pour bien séparer les faisceaux). Un rayon porte une bande (-1 = blanc) ; couleur = vecteur (r, g, b) additif. `ColorTarget` additionne la lumière reçue et compare la couleur normalisée (tolérance 0,2, luminosité ≥ 0,5). `Filter` ne laisse passer que ses bandes (le blanc devient ces bandes). Les cœurs colorés sont dessinés en mode 'lighter'. Pièces indexées miroirs, blocs, verres dépolis, prismes, filtres.
 - Réglages (`src/ui/settings.ts`) : faisceau et impacts de 0 à 100 (défaut 60/60), préréglages Doux/Normal/Intense, « Réduire les animations » (suit `prefers-reduced-motion` tant que le joueur n'a pas choisi), aperçu en direct rendu par le vrai `SceneRenderer`. Route `#/reglages`.
 - Finition : qualité automatique (`src/game/quality.ts`, moyenne de 60 images > 24 ms → halos d'un cran plus simples ; pendant un glisser, halos en version rapide puis pleine qualité au relâchement), son Web Audio généré (`src/game/audio.ts`, démarre au premier geste), tutoriel des niveaux 1 à 3 (`src/game/tutorial.ts`, bulle placée hors des faisceaux), mode daltonien (`src/render/symbols.ts`), clavier : Tab sur le plateau, flèches pour déplacer, R pour tourner. Tests de bout en bout : `e2e/`, `npm run test:e2e`.
+- Livraison : `npm run build` (vite + `scripts/postbuild.mjs` : service worker versionné, échec si un chemin absolu subsiste), `npm run package` (`lumen-dist.zip`), workflow `.github/workflows/deploy.yml` sur `master`. Version installable : `public/manifest.webmanifest`, icônes dans `public/icons/`.
