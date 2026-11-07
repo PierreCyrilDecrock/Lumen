@@ -51,6 +51,40 @@ export interface Target {
   passThrough?: boolean;
 }
 
+/** Transparent materials and their refractive index. */
+export const MATERIALS = {
+  water: { n: 1.33, name: 'Eau' },
+  glass: { n: 1.5, name: 'Verre' },
+  diamond: { n: 2.42, name: 'Diamant' },
+} as const;
+
+export type Material = keyof typeof MATERIALS;
+
+/** Refractive index of air, outside every medium. */
+export const AIR_INDEX = 1;
+
+/**
+ * Transparent block: a rectangle centred on (x, y), `width` along `angle` and
+ * `height` across. Media never overlap; outside them is air.
+ */
+export interface Medium {
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  width: number;
+  height: number;
+  material: Material;
+  /** The player may rotate it (default true). */
+  rotatable?: boolean;
+  /** The player may drag it (default false). */
+  movable?: boolean;
+  /** Can go back to the tray (implies movable). */
+  trayable?: boolean;
+  /** Currently in the tray: not on the board, ignored by the tracer. */
+  stored?: boolean;
+}
+
 /** Everything the optical engine needs to trace a board. */
 export interface Level {
   width: number;
@@ -59,6 +93,7 @@ export interface Level {
   mirrors: readonly Mirror[];
   walls: readonly Wall[];
   targets: readonly Target[];
+  media?: readonly Medium[];
 }
 
 export const DEFAULT_TARGET_RADIUS = 12;

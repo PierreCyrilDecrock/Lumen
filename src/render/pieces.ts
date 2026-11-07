@@ -1,10 +1,11 @@
-import type { Emitter, Mirror, Target, Wall } from '../engine';
+import type { Emitter, Medium, Mirror, Target, Wall } from '../engine';
 import { DEG_TO_RAD } from '../engine';
 import {
   AMBER,
   CYAN,
   EMITTER_BODY,
   EMITTER_LINE,
+  MEDIUM_STYLE,
   MIRROR_BACK,
   MIRROR_BODY,
   MIRROR_SHINE,
@@ -137,4 +138,43 @@ export function drawTarget(ctx: CanvasRenderingContext2D, target: Target, lit: b
   ctx.fillStyle = AMBER;
   ctx.fill();
   ctx.globalAlpha = 1;
+}
+
+/** Transparent block: tinted fill, light edge, subtle inner sheen. */
+export function drawMedium(
+  ctx: CanvasRenderingContext2D,
+  medium: Medium,
+  scale = 1,
+  selected = false,
+): void {
+  if (medium.stored === true) return;
+  const style = MEDIUM_STYLE[medium.material];
+  const w = medium.width;
+  const h = medium.height;
+  ctx.save();
+  ctx.translate(medium.x, medium.y);
+  ctx.rotate(medium.angle * DEG_TO_RAD);
+  if (scale !== 1) ctx.scale(scale, scale);
+  ctx.beginPath();
+  ctx.rect(-w / 2, -h / 2, w, h);
+  ctx.fillStyle = style.fill;
+  ctx.fill();
+  ctx.lineWidth = selected ? 2.5 : 1.5;
+  ctx.strokeStyle = selected ? CYAN : style.edge;
+  ctx.stroke();
+  // Sheen along one edge, to read as glass rather than a flat area.
+  ctx.beginPath();
+  ctx.moveTo(-w / 2 + 4, -h / 2 + 4);
+  ctx.lineTo(w / 2 - 4, -h / 2 + 4);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (medium.movable === true || medium.trayable === true) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
 }

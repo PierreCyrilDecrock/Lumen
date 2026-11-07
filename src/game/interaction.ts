@@ -1,30 +1,39 @@
 import {
   endpointsOf,
+  pointPolygonDistance,
   pointSegmentDistance,
+  rectCorners,
   type Level,
+  type Material,
+  type Medium,
   type Mirror,
   type SegmentCoords,
 } from '../engine';
 import { History } from './history';
 import type { LogicalPointerEvent } from './input';
-import { canPlaceMirror } from './placement';
-import { snapAngle, snapToGrid } from './snap';
+import { canPlace, type PieceKind } from './placement';
+import { GRID_STEP, snapAngle, snapToGrid } from './snap';
 
 /** Pose of a piece, as stored in the history. */
 export interface Pose {
   x: number;
   y: number;
   angle: number;
+  /** For tray blocks: true while in the tray. */
+  stored: boolean;
 }
 
-/** One undoable change of a mirror. */
-export interface MirrorChange {
+/** One undoable change of a piece (`index` in the unified piece list). */
+export interface PieceChange {
   index: number;
   from: Pose;
   to: Pose;
 }
 
 export type DragMode = 'none' | 'rotate' | 'move' | 'press';
+
+/** A piece the player can handle: a mirror or a transparent block. */
+export type Piece = Mirror | Medium;
 
 export interface InteractionHooks {
   /** Pointer capture radius in logical units (44 CSS px wide zone). */
@@ -34,24 +43,39 @@ export interface InteractionHooks {
   /** Called when the selection, the history or a piece changes. */
   onChange?(): void;
   /** Called for each player move (not for undo / redo). */
-  onCommit?(change: MirrorChange): void;
+  onCommit?(change: PieceChange): void;
 }
 
-/** Gap between a mirror's end and its rotation ring. */
+/** Gap between a piece and its rotation ring. */
 const RING_GAP = 16;
+const NO_MEDIA: Medium[] = [];
 
-export const isRotatable = (m: Mirror): boolean => m.rotatable !== false;
-export const isMovable = (m: Mirror): boolean => m.movable === true;
-const isSelectable = (m: Mirror): boolean => isRotatable(m) || isMovable(m);
+export const isMedium = (p: Piece): p is Medium => 'material' in p;
+export const isRotatable = (p: Piece): boolean => p.rotatable !== false;
+export const isMovable = (p: Piece): boolean =>
+  p.movable === true || (isMedium(p) && p.trayable === true);
+const isOnBoard = (p: Piece): boolean => !(isMedium(p) && p.stored === true);
+const isSelectable = (p: Piece): boolean => isOnBoard(p) && (isRotatable(p) || isMovable(p));
 
-/** Radius of the rotation ring around a mirror. */
-export function ringRadius(m: Mirror): number {
-  return m.length / 2 + RING_GAP;
+/** Radius of the rotation ring around a piece. */
+export function ringRadius(p: Piece): number {
+  return isMedium(p) ? Math.hypot(p.width, p.height) / 2 + RING_GAP - 4 : p.length / 2 + RING_GAP;
+}
+
+/** Distance from the centre where the arm to the handle starts. */
+export function armStart(p: Piece): number {
+  return isMedium(p) ? p.width / 2 : p.length / 2;
+}
+
+/** True when the piece looks the same after a half turn. */
+export function isHalfTurnSymmetric(p: Piece): boolean {
+  return isMedium(p) || p.doubleSided !== false;
 }
 
 /**
- * Selection, rotation, movement and undo/redo of mirrors. DOM-free: it consumes
- * pointer events in logical units and mutates the level's mirrors in place.
+ * Selection, rotation, movement, tray and undo/redo of the board's pieces.
+ * DOM-free: it consumes pointer events in logical units and mutates the level's
+ * pieces in place. Pieces are indexed mirrors first, then media.
  */
 export class Interaction {
   selected = -1;
@@ -60,23 +84,49 @@ export class Interaction {
   dirty = true;
   /** Time (s) of the last drop or keyboard rotation, for the bounce effect. */
   dropTime = -Infinity;
-  readonly history = new History<MirrorChange>();
+  readonly history = new History<PieceChange>();
   /** While true (pause, victory), the player can no longer change anything. */
   locked = false;
 
-  private readonly start: Pose = { x: 0, y: 0, angle: 0 };
+  private readonly start: Pose = { x: 0, y: 0, angle: 0, stored: false };
   private grabDx = 0;
   private grabDy = 0;
   private grabAngle = 0;
   private readonly seg: SegmentCoords = { ax: 0, ay: 0, bx: 0, by: 0 };
+  private readonly poly = new Float64Array(8);
+  private readonly media: Medium[];
 
   constructor(
     readonly level: Level,
     private readonly hooks: InteractionHooks,
-  ) {}
+  ) {
+    this.media = (level.media as Medium[] | undefined) ?? NO_MEDIA;
+  }
 
-  get selectedMirror(): Mirror | null {
-    return this.level.mirrors[this.selected] ?? null;
+  get pieceCount(): number {
+    return this.level.mirrors.length + this.media.length;
+  }
+
+  piece(index: number): Piece | null {
+    const mirrors = this.level.mirrors;
+    if (index < 0) return null;
+    return index < mirrors.length
+      ? (mirrors[index] ?? null)
+      : (this.media[index - mirrors.length] ?? null);
+  }
+
+  kindOf(index: number): PieceKind {
+    return index < this.level.mirrors.length ? 'mirror' : 'medium';
+  }
+
+  /** Unified index of the piece with this id, or -1. */
+  indexOf(id: string): number {
+    for (let i = 0; i < this.pieceCount; i++) if (this.piece(i)?.id === id) return i;
+    return -1;
+  }
+
+  get selectedPiece(): Piece | null {
+    return this.piece(this.selected);
   }
 
   handlePointer(e: LogicalPointerEvent, time: number): void {
@@ -101,18 +151,54 @@ export class Interaction {
 
   /** Rotates the selection by `delta` degrees (keyboard). */
   rotateSelected(delta: number, time: number): boolean {
-    const m = this.selectedMirror;
-    if (!m || !isRotatable(m) || this.mode !== 'none' || this.locked) return false;
-    const angle = snapAngle(m.angle + delta);
-    if (!canPlaceMirror(this.level, this.selected, m.x, m.y, angle)) return false;
-    const from = pose(m);
-    m.angle = angle;
-    const change = { index: this.selected, from, to: pose(m) };
-    this.history.push(change);
-    this.hooks.onCommit?.(change);
-    this.dirty = true;
-    this.dropTime = time;
-    this.hooks.onChange?.();
+    const p = this.selectedPiece;
+    if (!p || !isRotatable(p) || this.mode !== 'none' || this.locked) return false;
+    const angle = snapAngle(p.angle + delta);
+    if (!this.canPlace(this.selected, p.x, p.y, angle)) return false;
+    const from = poseOf(p);
+    p.angle = angle;
+    this.commit(this.selected, from, time);
+    return true;
+  }
+
+  /** Blocks of each material still in the tray. */
+  trayCounts(): Partial<Record<Material, number>> {
+    const counts: Partial<Record<Material, number>> = {};
+    for (const m of this.media) {
+      if (m.trayable === true && m.stored === true)
+        counts[m.material] = (counts[m.material] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /** Puts a block of `material` from the tray on the board, near its preferred spot. */
+  placeFromTray(material: Material, time: number): boolean {
+    if (this.locked || this.mode !== 'none') return false;
+    const offset = this.level.mirrors.length;
+    const i = this.media.findIndex((m) => m.material === material && m.stored === true);
+    const block = this.media[i];
+    if (!block) return false;
+    const spot = this.findFreeSpot(offset + i, block);
+    if (!spot) return false;
+    const from = poseOf(block);
+    block.stored = false;
+    block.x = spot.x;
+    block.y = spot.y;
+    this.selected = offset + i;
+    this.commit(offset + i, from, time);
+    return true;
+  }
+
+  /** Sends the selected block back to the tray. */
+  storeSelected(time: number): boolean {
+    const p = this.selectedPiece;
+    if (!p || !isMedium(p) || p.trayable !== true || this.locked || this.mode !== 'none')
+      return false;
+    const index = this.selected;
+    const from = poseOf(p);
+    p.stored = true;
+    this.selected = -1;
+    this.commit(index, from, time);
     return true;
   }
 
@@ -144,21 +230,57 @@ export class Interaction {
     if (this.onHandle(x, y) || this.onRing(x, y)) return 'grab';
     const index = this.pick(x, y);
     if (index < 0) return 'default';
-    return isMovable(this.level.mirrors[index]!) ? 'grab' : 'pointer';
+    return isMovable(this.piece(index)!) ? 'grab' : 'pointer';
   }
 
-  /** Position of the rotation handle of `m`, written into `out`. */
-  handlePosition(m: Mirror, out: { x: number; y: number }): { x: number; y: number } {
-    const a = (m.angle * Math.PI) / 180;
-    const r = ringRadius(m);
-    out.x = m.x + Math.cos(a) * r;
-    out.y = m.y + Math.sin(a) * r;
+  /** Position of the rotation handle of `p`, written into `out`. */
+  handlePosition(p: Piece, out: { x: number; y: number }): { x: number; y: number } {
+    const a = (p.angle * Math.PI) / 180;
+    const r = ringRadius(p);
+    out.x = p.x + Math.cos(a) * r;
+    out.y = p.y + Math.sin(a) * r;
     return out;
+  }
+
+  canPlace(index: number, x: number, y: number, angle: number): boolean {
+    const offset = this.level.mirrors.length;
+    const kind = this.kindOf(index);
+    return canPlace(this.level, kind, kind === 'mirror' ? index : index - offset, x, y, angle);
+  }
+
+  private commit(index: number, from: Pose, time: number): void {
+    const p = this.piece(index)!;
+    const change = { index, from, to: poseOf(p) };
+    this.history.push(change);
+    this.hooks.onCommit?.(change);
+    this.dirty = true;
+    this.dropTime = time;
+    this.hooks.onChange?.();
+  }
+
+  /** Preferred spot of a block, else the nearest free grid spot around it. */
+  private findFreeSpot(index: number, block: Medium): { x: number; y: number } | null {
+    const cx = snapToGrid(block.x);
+    const cy = snapToGrid(block.y);
+    for (let ring = 0; ring <= 40; ring++) {
+      for (let dx = -ring; dx <= ring; dx++) {
+        for (let dy = -ring; dy <= ring; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          const x = cx + dx * GRID_STEP;
+          const y = cy + dy * GRID_STEP;
+          block.stored = false;
+          const ok = this.canPlace(index, x, y, block.angle);
+          block.stored = true;
+          if (ok) return { x, y };
+        }
+      }
+    }
+    return null;
   }
 
   private onDown(x: number, y: number): void {
     if (this.mode !== 'none') return;
-    const current = this.selectedMirror;
+    const current = this.selectedPiece;
     if (current && isRotatable(current) && this.onHandle(x, y)) {
       this.beginRotate(current, x, y);
       return;
@@ -167,11 +289,11 @@ export class Interaction {
     if (index >= 0) {
       const changed = index !== this.selected;
       this.selected = index;
-      const m = this.level.mirrors[index]!;
-      if (isMovable(m)) {
-        this.copyStart(m);
-        this.grabDx = x - m.x;
-        this.grabDy = y - m.y;
+      const p = this.piece(index)!;
+      if (isMovable(p)) {
+        copyPose(p, this.start);
+        this.grabDx = x - p.x;
+        this.grabDy = y - p.y;
         this.mode = 'move';
       } else {
         this.mode = 'press';
@@ -186,80 +308,88 @@ export class Interaction {
     this.deselect();
   }
 
-  private beginRotate(m: Mirror, x: number, y: number): void {
-    this.copyStart(m);
-    this.grabAngle = m.angle - pointerAngle(m, x, y);
+  private beginRotate(p: Piece, x: number, y: number): void {
+    copyPose(p, this.start);
+    this.grabAngle = p.angle - pointerAngle(p, x, y);
     this.mode = 'rotate';
   }
 
   private onDrag(x: number, y: number, pointerType: string): void {
-    const m = this.selectedMirror;
-    if (!m) return;
+    const p = this.selectedPiece;
+    if (!p) return;
     if (this.mode === 'rotate') {
-      const angle = snapAngle(pointerAngle(m, x, y) + this.grabAngle);
-      if (angle === m.angle) return;
-      if (!canPlaceMirror(this.level, this.selected, m.x, m.y, angle)) return;
-      m.angle = angle;
+      const angle = snapAngle(pointerAngle(p, x, y) + this.grabAngle);
+      if (angle === p.angle) return;
+      if (!this.canPlace(this.selected, p.x, p.y, angle)) return;
+      p.angle = angle;
       this.dirty = true;
       this.hooks.onAngleStep?.(pointerType);
     } else if (this.mode === 'move') {
       const nx = snapToGrid(x - this.grabDx);
       const ny = snapToGrid(y - this.grabDy);
-      if (nx === m.x && ny === m.y) return;
-      if (!canPlaceMirror(this.level, this.selected, nx, ny, m.angle)) return;
-      m.x = nx;
-      m.y = ny;
+      if (nx === p.x && ny === p.y) return;
+      if (!this.canPlace(this.selected, nx, ny, p.angle)) return;
+      p.x = nx;
+      p.y = ny;
       this.dirty = true;
     }
   }
 
   private finishDrag(time: number): void {
-    const m = this.selectedMirror;
+    const p = this.selectedPiece;
     const mode = this.mode;
     this.mode = 'none';
-    if (!m || (mode !== 'rotate' && mode !== 'move')) return;
+    if (!p || (mode !== 'rotate' && mode !== 'move')) return;
     const s = this.start;
-    if (m.x === s.x && m.y === s.y && m.angle === s.angle) return;
-    const change = { index: this.selected, from: { ...s }, to: pose(m) };
-    this.history.push(change);
-    this.hooks.onCommit?.(change);
-    this.dropTime = time;
-    this.hooks.onChange?.();
+    if (p.x === s.x && p.y === s.y && p.angle === s.angle) return;
+    this.commit(this.selected, { ...s }, time);
   }
 
   private cancelDrag(): void {
-    const m = this.selectedMirror;
+    const p = this.selectedPiece;
     const mode = this.mode;
     this.mode = 'none';
-    if (!m || (mode !== 'rotate' && mode !== 'move')) return;
-    m.x = this.start.x;
-    m.y = this.start.y;
-    m.angle = this.start.angle;
+    if (!p || (mode !== 'rotate' && mode !== 'move')) return;
+    p.x = this.start.x;
+    p.y = this.start.y;
+    p.angle = this.start.angle;
     this.dirty = true;
   }
 
-  private apply(index: number, p: Pose): void {
-    const m = this.level.mirrors[index];
-    if (!m) return;
-    m.x = p.x;
-    m.y = p.y;
-    m.angle = p.angle;
-    this.selected = index;
+  private apply(index: number, pose: Pose): void {
+    const p = this.piece(index);
+    if (!p) return;
+    p.x = pose.x;
+    p.y = pose.y;
+    p.angle = pose.angle;
+    if (isMedium(p) && p.trayable === true) p.stored = pose.stored;
+    this.selected = pose.stored ? -1 : index;
     this.dirty = true;
     this.hooks.onChange?.();
   }
 
-  /** Nearest selectable mirror within the capture radius, or -1. */
+  /** Distance from (x, y) to a piece on the board. */
+  private distanceTo(p: Piece, x: number, y: number): number {
+    if (isMedium(p)) {
+      return pointPolygonDistance(
+        x,
+        y,
+        rectCorners(p.x, p.y, p.width, p.height, p.angle, this.poly),
+      );
+    }
+    const s = endpointsOf(p, this.seg);
+    return pointSegmentDistance(x, y, s.ax, s.ay, s.bx, s.by);
+  }
+
+  /** Nearest selectable piece within the capture radius, or -1 (mirrors win ties over blocks). */
   private pick(x: number, y: number): number {
     const reach = this.hooks.captureRadius();
     let best = -1;
     let bestDistance = Infinity;
-    const mirrors = this.level.mirrors;
-    for (let i = 0; i < mirrors.length; i++) {
-      const m = mirrors[i]!;
-      if (!isSelectable(m)) continue;
-      const s = endpointsOf(m, this.seg);
-      const d = pointSegmentDistance(x, y, s.ax, s.ay, s.bx, s.by);
+    for (let i = 0; i < this.pieceCount; i++) {
+      const p = this.piece(i)!;
+      if (!isSelectable(p)) continue;
+      const d = this.distanceTo(p, x, y);
       if (d <= reach && d < bestDistance) {
         best = i;
         bestDistance = d;
@@ -269,35 +399,37 @@ export class Interaction {
   }
 
   private onHandle(x: number, y: number): boolean {
-    const m = this.selectedMirror;
-    if (!m || !isRotatable(m)) return false;
-    const a = (m.angle * Math.PI) / 180;
-    const r = ringRadius(m);
-    const hx = m.x + Math.cos(a) * r;
-    const hy = m.y + Math.sin(a) * r;
-    return Math.hypot(x - hx, y - hy) <= this.hooks.captureRadius();
+    const p = this.selectedPiece;
+    if (!p || !isRotatable(p)) return false;
+    const a = (p.angle * Math.PI) / 180;
+    const r = ringRadius(p);
+    return (
+      Math.hypot(x - (p.x + Math.cos(a) * r), y - (p.y + Math.sin(a) * r)) <=
+      this.hooks.captureRadius()
+    );
   }
 
-  /** On the rotation ring band of the selected mirror. */
+  /** On the rotation ring band of the selected piece. */
   private onRing(x: number, y: number): boolean {
-    const m = this.selectedMirror;
-    if (!m || !isRotatable(m)) return false;
-    const d = Math.hypot(x - m.x, y - m.y);
-    return Math.abs(d - ringRadius(m)) <= this.hooks.captureRadius() * 0.75;
-  }
-
-  private copyStart(m: Mirror): void {
-    this.start.x = m.x;
-    this.start.y = m.y;
-    this.start.angle = m.angle;
+    const p = this.selectedPiece;
+    if (!p || !isRotatable(p)) return false;
+    const d = Math.hypot(x - p.x, y - p.y);
+    return Math.abs(d - ringRadius(p)) <= this.hooks.captureRadius() * 0.75;
   }
 }
 
-function pose(m: Mirror): Pose {
-  return { x: m.x, y: m.y, angle: m.angle };
+function poseOf(p: Piece): Pose {
+  return { x: p.x, y: p.y, angle: p.angle, stored: isMedium(p) && p.stored === true };
 }
 
-/** Angle of the pointer seen from the mirror centre, in degrees. */
-function pointerAngle(m: Mirror, x: number, y: number): number {
-  return (Math.atan2(y - m.y, x - m.x) * 180) / Math.PI;
+function copyPose(p: Piece, out: Pose): void {
+  out.x = p.x;
+  out.y = p.y;
+  out.angle = p.angle;
+  out.stored = isMedium(p) && p.stored === true;
+}
+
+/** Angle of the pointer seen from the piece centre, in degrees. */
+function pointerAngle(p: Piece, x: number, y: number): number {
+  return (Math.atan2(y - p.y, x - p.x) * 180) / Math.PI;
 }

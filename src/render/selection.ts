@@ -1,4 +1,11 @@
-import type { BeamSegment, Mirror } from '../engine';
+import type { BeamSegment } from '../engine';
+
+/** Anything with a centre and an orientation. */
+export interface Placed {
+  x: number;
+  y: number;
+  angle: number;
+}
 import { BACKGROUND, CYAN, FONT_FAMILY } from './theme';
 
 /** What the renderer needs to know about the player's selection. */
@@ -9,6 +16,8 @@ export interface SelectionView {
   /** True while the ring or the piece is being dragged. */
   dragging: boolean;
   ringRadius: number;
+  /** Distance from the centre where the arm to the handle starts. */
+  armStart: number;
   /** Angle text, e.g. "45°". */
   label: string;
   /** Drop bounce scale applied to the selected mirror (1 = rest). */
@@ -25,6 +34,7 @@ export function createSelectionView(): SelectionView {
     rotatable: false,
     dragging: false,
     ringRadius: 0,
+    armStart: 0,
     label: '',
     bounce: 1,
     hint: -1,
@@ -37,7 +47,7 @@ const TICKS = 24; // One per 15°.
 /** Rotation ring with 15° ticks and the handle aligned with the mirror. */
 export function drawRotationRing(
   ctx: CanvasRenderingContext2D,
-  m: Mirror,
+  m: Placed,
   view: SelectionView,
 ): void {
   const r = view.ringRadius;
@@ -72,7 +82,7 @@ export function drawRotationRing(
   ctx.globalAlpha = 0.5;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo((c * m.length) / 2, (s * m.length) / 2);
+  ctx.moveTo(c * view.armStart, s * view.armStart);
   ctx.lineTo(c * (r - 8), s * (r - 8));
   ctx.stroke();
 
@@ -96,7 +106,7 @@ const LABEL_HEIGHT = 22;
  */
 export function drawAngleLabel(
   ctx: CanvasRenderingContext2D,
-  m: Mirror,
+  m: Placed,
   view: SelectionView,
   beams: readonly BeamSegment[],
   boardWidth: number,
@@ -182,9 +192,8 @@ function clip(p: number, q: number): boolean {
   return clipRange.t0 <= clipRange.t1;
 }
 
-/** Hint highlight: a soft cyan double ring around the mirror to act on. */
-export function drawHint(ctx: CanvasRenderingContext2D, m: Mirror, alpha: number): void {
-  const r = m.length / 2 + 10;
+/** Hint highlight: a soft cyan double ring of radius `r` around the piece to act on. */
+export function drawHint(ctx: CanvasRenderingContext2D, m: Placed, r: number, alpha: number): void {
   ctx.save();
   ctx.strokeStyle = CYAN;
   ctx.globalAlpha = alpha;

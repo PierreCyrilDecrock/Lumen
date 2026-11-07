@@ -1,6 +1,8 @@
-import type { BeamSegment } from '../engine';
+import type { BeamSegment, Medium } from '../engine';
 import type { GameCanvas } from './canvas';
-import { HALO_AIR } from './theme';
+import { HALO_AIR, MEDIUM_STYLE } from './theme';
+
+const NO_MEDIA: readonly Medium[] = [];
 
 /** The halo canvas is half the resolution of the screen: it is blurred anyway. */
 const HALO_SCALE = 0.5;
@@ -24,6 +26,7 @@ export class HaloLayer {
   private lastIntensity = -1;
   private lastWidth = 0;
   private lastHeight = 0;
+  private media: readonly Medium[] = NO_MEDIA;
 
   constructor() {
     const ctx = this.canvas.getContext('2d');
@@ -40,7 +43,12 @@ export class HaloLayer {
   }
 
   /** Brings the cache up to date. Returns false when there is nothing to show. */
-  update(gc: GameCanvas, segments: readonly BeamSegment[], intensity: number): boolean {
+  update(
+    gc: GameCanvas,
+    segments: readonly BeamSegment[],
+    intensity: number,
+    media: readonly Medium[] = NO_MEDIA,
+  ): boolean {
     if (intensity <= 0 || segments.length === 0) return false;
     const width = Math.max(Math.ceil(gc.canvas.width * HALO_SCALE), 1);
     const height = Math.max(Math.ceil(gc.canvas.height * HALO_SCALE), 1);
@@ -50,6 +58,7 @@ export class HaloLayer {
       width !== this.lastWidth ||
       height !== this.lastHeight
     ) {
+      this.media = media;
       this.redraw(gc, segments, intensity, width, height);
       this.dirty = false;
       this.lastIntensity = intensity;
@@ -109,23 +118,36 @@ export class HaloLayer {
       let j = i;
       for (; j < segments.length; j++) {
         const s = segments[j]!;
-        if (s.r !== first.r || s.g !== first.g || s.b !== first.b) break;
+        if (
+          s.r !== first.r ||
+          s.g !== first.g ||
+          s.b !== first.b ||
+          s.medium !== first.medium ||
+          s.intensity !== first.intensity
+        ) {
+          break;
+        }
         const prev = segments[j - 1];
         if (j > i && prev && (prev.x2 !== s.x1 || prev.y2 !== s.y1)) ctx.moveTo(s.x1, s.y1);
         ctx.lineTo(s.x2, s.y2);
       }
-      ctx.strokeStyle = haloColor(first, alpha);
+      ctx.strokeStyle = haloColor(first, alpha * first.intensity, this.media);
       ctx.stroke();
       i = j;
     }
   }
 }
 
-/** White light gets a cool tint in air; coloured light keeps its colour. */
-function haloColor(s: BeamSegment, alpha: number): string {
+/**
+ * White light gets a cool tint in air and the tint of the medium it crosses
+ * (water cyan, glass lavender, diamond pink); coloured light keeps its colour.
+ */
+function haloColor(s: BeamSegment, alpha: number, media: readonly Medium[]): string {
   const white = s.r === 1 && s.g === 1 && s.b === 1;
-  const r = white ? HALO_AIR[0] : Math.round(s.r * 255);
-  const g = white ? HALO_AIR[1] : Math.round(s.g * 255);
-  const b = white ? HALO_AIR[2] : Math.round(s.b * 255);
+  const medium = s.medium >= 0 ? media[s.medium] : undefined;
+  const tint = medium ? MEDIUM_STYLE[medium.material].halo : HALO_AIR;
+  const r = white ? tint[0] : Math.round(s.r * 255);
+  const g = white ? tint[1] : Math.round(s.g * 255);
+  const b = white ? tint[2] : Math.round(s.b * 255);
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
 }

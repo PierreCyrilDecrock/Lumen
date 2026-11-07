@@ -70,6 +70,15 @@
         </div>
         <div class="app-actions">
           <button
+            id="play-store"
+            class="icon-button"
+            type="button"
+            data-icon="tray"
+            aria-label="Remettre le bloc au bac"
+            title="Remettre au bac"
+            hidden
+          ></button>
+          <button
             id="play-hint"
             class="icon-button"
             type="button"
@@ -95,6 +104,7 @@
           ></button>
         </div>
       </div>
+      <p id="play-optics" class="hud-optics" aria-live="polite" hidden></p>
       <main class="app-stage">
         <canvas
           id="game"
@@ -103,6 +113,7 @@
           aria-label="Plateau : tournez et déplacez les miroirs pour guider la lumière jusqu'aux cibles"
         ></canvas>
       </main>
+      <div id="tray" class="tray" role="group" aria-label="Bac de matières" hidden></div>
       <p id="play-message" class="sr-only" aria-live="polite"></p>
 
       <div id="pause" class="overlay" hidden>

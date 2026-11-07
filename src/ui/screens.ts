@@ -1,4 +1,6 @@
+import { MATERIALS, type Material } from '../engine';
 import type { GameView } from '../game-view';
+import { isMedium } from '../game/interaction';
 import { CHAPTER_TITLES, LEVELS, findLevel, levelIndex, nextLevel } from '../levels';
 import { MECHANICS } from '../levels/schema';
 import { isCompleted, recordResult, writeSave, type SaveData } from '../storage';
@@ -44,6 +46,14 @@ export class GameUi {
     }
     $('#play-pause').addEventListener('click', () => this.openPause());
     $('#play-hint').addEventListener('click', () => this.hint());
+    $('#play-store').addEventListener('click', () =>
+      this.game.interaction?.storeSelected(this.game.time),
+    );
+    $('#tray').addEventListener('click', (e) => {
+      const button = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-material]');
+      const material = button?.dataset.material as Material | undefined;
+      if (material) this.game.interaction?.placeFromTray(material, this.game.time);
+    });
     $('#pause-resume').addEventListener('click', () => this.closeOverlay());
     $('#pause-restart').addEventListener('click', () => {
       this.closeOverlay();
@@ -83,7 +93,40 @@ export class GameUi {
       `${game.stars} étoile${game.stars > 1 ? 's' : ''} possible${game.stars > 1 ? 's' : ''}`,
     );
     $<HTMLButtonElement>('#play-hint').disabled = game.won;
+    const selected = game.interaction?.selectedPiece;
+    $('#play-store').hidden = !(selected && isMedium(selected) && selected.trayable === true);
+    this.renderTray();
+    this.refreshOptics();
     this.hud.refresh();
+  }
+
+  /** Entry / exit angles line, for levels with blocks. */
+  refreshOptics(): void {
+    const el = $('#play-optics');
+    const text = this.game.opticsSummary();
+    el.hidden = text === '';
+    if (el.textContent !== text) el.textContent = text;
+  }
+
+  /** One button per material that the level keeps in its tray. */
+  private renderTray(): void {
+    const tray = $('#tray');
+    const media = this.game.level?.media ?? [];
+    const materials = (Object.keys(MATERIALS) as Material[]).filter((m) =>
+      media.some((block) => block.trayable === true && block.material === m),
+    );
+    tray.hidden = materials.length === 0;
+    if (tray.hidden) return;
+    const counts = this.game.interaction?.trayCounts() ?? {};
+    const locked = this.game.interaction?.locked === true;
+    tray.innerHTML = materials
+      .map((m) => {
+        const count = counts[m] ?? 0;
+        const name = MATERIALS[m].name;
+        return `<button class="tray-item tray-${m}" type="button" data-material="${m}" ${count === 0 || locked ? 'disabled' : ''} aria-label="Poser un bloc : ${name}, ${count} restant${count > 1 ? 's' : ''}">
+          <span class="tray-swatch" aria-hidden="true"></span>${name}<span class="tray-count">×${count}</span></button>`;
+      })
+      .join('');
   }
 
   /** Opens the pause overlay (Escape key or pause button). */
@@ -96,10 +139,12 @@ export class GameUi {
     const kind = this.game.showHint();
     $('#play-message').textContent =
       kind === 'move'
-        ? 'Indice : déplacez le miroir surligné.'
+        ? 'Indice : déplacez la pièce surlignée.'
         : kind === 'rotate'
-          ? 'Indice : tournez le miroir surligné.'
-          : '';
+          ? 'Indice : tournez la pièce surlignée.'
+          : kind === 'place'
+            ? 'Indice : posez un bloc depuis le bac.'
+            : '';
   }
 
   /** Called by the game once every target is lit. */

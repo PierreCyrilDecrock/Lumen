@@ -23,3 +23,25 @@ export const WALL_THICKNESS = 10;
 
 export const EMITTER_BODY = '#121826';
 export const EMITTER_LINE = '#C8D6E5';
+
+/** Transparent blocks: fill, edge and halo tint (r, g, b 0-255) per material. */
+export const MEDIUM_STYLE = {
+  water: {
+    fill: 'rgba(90, 200, 255, 0.10)',
+    edge: 'rgba(143, 239, 255, 0.55)',
+    halo: [110, 225, 255],
+  },
+  glass: {
+    fill: 'rgba(181, 160, 255, 0.10)',
+    edge: 'rgba(200, 185, 255, 0.6)',
+    halo: [190, 170, 255],
+  },
+  diamond: {
+    fill: 'rgba(255, 140, 200, 0.10)',
+    edge: 'rgba(255, 175, 220, 0.65)',
+    halo: [255, 150, 210],
+  },
+} as const;
+
+/** Thin solid normals at interfaces. */
+export const NORMAL_COLOR = 'rgba(234, 246, 255, 0.4)';

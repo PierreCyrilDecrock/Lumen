@@ -2,7 +2,7 @@
 
 Jeu de puzzle sur la lumière (réflexion, réfraction, diffusion, dispersion), jouable dans le navigateur sur mobile et sur ordinateur.
 
-> État : étape 5 du [plan de développement](docs/plan-de-developpement.md). 12 niveaux de réflexion jouables, avec menu, sélection des niveaux, étoiles, indices, pause et progression sauvegardée. La page `demo/` garde les curseurs de rendu.
+> État : étape 6 du [plan de développement](docs/plan-de-developpement.md). 12 niveaux de réflexion et 10 de réfraction (eau, verre, diamant, réflexion totale), avec menu, étoiles, indices, pause et progression sauvegardée.
 
 ## Commandes de jeu
 

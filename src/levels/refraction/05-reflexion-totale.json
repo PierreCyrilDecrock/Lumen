@@ -1,0 +1,43 @@
+{
+  "id": "f05",
+  "title": "Réflexion totale",
+  "mechanic": "refraction",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 30,
+      "y": 203,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 256.9,
+      "y": 438.1
+    }
+  ],
+  "pieces": [
+    {
+      "type": "medium",
+      "id": "rod",
+      "material": "diamond",
+      "x": 200,
+      "y": 260,
+      "width": 160,
+      "height": 50,
+      "angle": 0
+    }
+  ],
+  "stars": [3, 6],
+  "solution": [
+    {
+      "piece": "rod",
+      "angle": 45
+    }
+  ]
+}

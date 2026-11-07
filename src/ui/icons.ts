@@ -10,6 +10,9 @@ export const ICONS = {
   ),
   undo: svg('<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />'),
   redo: svg('<path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />'),
+  tray: svg(
+    '<path d="M3 13h5l1.5 3h5l1.5-3h5" /><path d="M5 5h14l2 8v6H3v-6z" /><path d="M12 3v7m-3-3 3 3 3-3" />',
+  ),
   lock: svg(
     '<rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />',
   ),

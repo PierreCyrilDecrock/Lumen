@@ -367,6 +367,82 @@ body.app {
   font-variant-numeric: tabular-nums;
 }
 
+/* Optics readout and tray of materials (refraction). */
+.hud-optics {
+  margin: 0;
+  padding: 6px 16px;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--line);
+}
+
+.tray {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: #050812;
+}
+
+.app-stage:has(+ .tray:not([hidden])) {
+  padding-bottom: 0;
+}
+
+.tray-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.tray-item:hover:not(:disabled) {
+  border-color: var(--cyan);
+}
+
+.tray-item:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+
+.tray-swatch {
+  width: 18px;
+  height: 14px;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+
+.tray-water .tray-swatch {
+  border-color: #8fefff;
+  background: rgba(90, 200, 255, 0.25);
+}
+
+.tray-glass .tray-swatch {
+  border-color: #c8b9ff;
+  background: rgba(181, 160, 255, 0.25);
+}
+
+.tray-diamond .tray-swatch {
+  border-color: #ffafdc;
+  background: rgba(255, 140, 200, 0.25);
+}
+
+.tray-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Overlays (pause, victory). */
 .overlay {
   position: absolute;

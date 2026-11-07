@@ -1,4 +1,12 @@
-import type { Level, Mirror, Target, Wall } from '../engine';
+import {
+  MATERIALS,
+  type Level,
+  type Material,
+  type Medium,
+  type Mirror,
+  type Target,
+  type Wall,
+} from '../engine';
 
 /** Chapters of the game, in play order. */
 export const MECHANICS = ['reflection', 'refraction', 'diffusion', 'dispersion'] as const;
@@ -43,7 +51,22 @@ export interface WallDef {
   length: number;
 }
 
-export type PieceDef = MirrorDef | WallDef;
+/** Transparent block. With `inTray`, it starts in the tray; x, y is where it lands when taken out. */
+export interface MediumDef {
+  type: 'medium';
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  width: number;
+  height: number;
+  material: Material;
+  rotatable?: boolean;
+  movable?: boolean;
+  inTray?: boolean;
+}
+
+export type PieceDef = MirrorDef | WallDef | MediumDef;
 
 /** One step of the reference solution: final pose of a piece. */
 export interface SolutionStep {
@@ -224,6 +247,28 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     if (o.type === 'wall') {
       return [{ type: 'wall', ...base, length: c.number(o, 'length', path, 1) }];
     }
+    if (o.type === 'medium') {
+      const material = o.material as Material;
+      if (!(typeof material === 'string' && material in MATERIALS)) {
+        c.fail(
+          `${path}.material`,
+          `une matière parmi ${Object.keys(MATERIALS).join(', ')} attendue`,
+        );
+      }
+      if (base.angle % 15 !== 0) c.fail(`${path}.angle`, 'multiple de 15° attendu');
+      return [
+        compact({
+          type: 'medium' as const,
+          ...base,
+          width: c.number(o, 'width', path, 10),
+          height: c.number(o, 'height', path, 10),
+          material,
+          rotatable: c.optionalBoolean(o, 'rotatable', path),
+          movable: c.optionalBoolean(o, 'movable', path),
+          inTray: c.optionalBoolean(o, 'inTray', path),
+        }),
+      ];
+    }
     c.fail(`${path}.type`, `type de pièce inconnu « ${String(o.type)} »`);
     return [];
   });
@@ -239,8 +284,11 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     const path = `solution[${i}]`;
     const o = c.object(s, path) ?? {};
     const piece = c.string(o, 'piece', path);
-    const mirror = pieces.find((p): p is MirrorDef => p.type === 'mirror' && p.id === piece);
-    if (piece && !mirror) c.fail(`${path}.piece`, `aucun miroir « ${piece} »`);
+    const mirror = pieces.find(
+      (p): p is MirrorDef | MediumDef =>
+        (p.type === 'mirror' || p.type === 'medium') && p.id === piece,
+    );
+    if (piece && !mirror) c.fail(`${path}.piece`, `aucune pièce mobile « ${piece} »`);
     const step = compact({
       piece,
       angle: c.optionalNumber(o, 'angle', path),
@@ -250,10 +298,19 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     if (step.angle !== undefined && step.angle % 15 !== 0)
       c.fail(`${path}.angle`, 'multiple de 15° attendu');
     if (mirror && step.angle !== undefined && mirror.rotatable === false) {
-      c.fail(`${path}.angle`, `le miroir « ${piece} » ne tourne pas`);
+      c.fail(`${path}.angle`, `la pièce « ${piece} » ne tourne pas`);
     }
-    if (mirror && (step.x !== undefined || step.y !== undefined) && mirror.movable !== true) {
-      c.fail(path, `le miroir « ${piece} » ne se déplace pas`);
+    const canMove =
+      mirror?.movable === true || (mirror?.type === 'medium' && mirror.inTray === true);
+    if (mirror && (step.x !== undefined || step.y !== undefined) && !canMove) {
+      c.fail(path, `la pièce « ${piece} » ne se déplace pas`);
+    }
+    if (
+      mirror?.type === 'medium' &&
+      mirror.inTray === true &&
+      (step.x === undefined || step.y === undefined)
+    ) {
+      c.fail(path, `le bloc « ${piece} » sort du bac : x et y attendus`);
     }
     return step;
   });
@@ -277,10 +334,14 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
 export function toEngineLevel(def: LevelDefinition): Level {
   const mirrors: Mirror[] = [];
   const walls: Wall[] = [];
+  const media: Medium[] = [];
   for (const p of def.pieces) {
     if (p.type === 'mirror') {
       const { type: _type, length, ...rest } = p;
       mirrors.push({ ...rest, length: length ?? DEFAULT_MIRROR_LENGTH });
+    } else if (p.type === 'medium') {
+      const { type: _type, inTray, ...rest } = p;
+      media.push(inTray === true ? { ...rest, trayable: true, stored: true } : { ...rest });
     } else {
       const { type: _type, ...rest } = p;
       walls.push({ ...rest });
@@ -297,17 +358,21 @@ export function toEngineLevel(def: LevelDefinition): Level {
     mirrors,
     walls,
     targets,
+    media,
   };
 }
 
 /** Applies the reference solution to an engine level built from `def`. */
 export function applySolution(def: LevelDefinition, level: Level): Level {
   for (const step of def.solution) {
-    const m = level.mirrors.find((mirror) => mirror.id === step.piece);
+    const m: Mirror | Medium | undefined =
+      level.mirrors.find((mirror) => mirror.id === step.piece) ??
+      level.media?.find((medium) => medium.id === step.piece);
     if (!m) continue;
     if (step.angle !== undefined) m.angle = step.angle;
     if (step.x !== undefined) m.x = step.x;
     if (step.y !== undefined) m.y = step.y;
+    if ('material' in m && step.x !== undefined) m.stored = false;
   }
   return level;
 }

@@ -1,0 +1,65 @@
+{
+  "id": "f08",
+  "title": "Diamant brut",
+  "mechanic": "refraction",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 90,
+      "angle": 30
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 301.8,
+      "y": 319,
+      "radius": 8
+    }
+  ],
+  "pieces": [
+    {
+      "type": "medium",
+      "id": "diamond",
+      "material": "diamond",
+      "x": 110,
+      "y": 480,
+      "width": 260,
+      "height": 100,
+      "angle": 0,
+      "inTray": true
+    },
+    {
+      "type": "medium",
+      "id": "glass",
+      "material": "glass",
+      "x": 280,
+      "y": 480,
+      "width": 260,
+      "height": 100,
+      "angle": 0,
+      "inTray": true
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 290,
+      "y": 330,
+      "angle": 0,
+      "length": 110
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "diamond",
+      "x": 200,
+      "y": 260
+    }
+  ]
+}

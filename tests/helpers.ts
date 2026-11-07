@@ -1,4 +1,4 @@
-import type { Emitter, Level, Mirror, Target, Wall } from '../src/engine';
+import type { Emitter, Level, Medium, Mirror, Target, Wall } from '../src/engine';
 
 let nextId = 0;
 const id = (prefix: string): string => `${prefix}${nextId++}`;
@@ -40,3 +40,12 @@ export function level(parts: Partial<Level>): Level {
 /** "\" on screen (y down) is 45°, "/" is 135°. */
 export const BACKSLASH = 45;
 export const SLASH = 135;
+
+export const medium = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  material: Medium['material'],
+  angle = 0,
+): Medium => ({ id: id('n'), x, y, width, height, angle, material });

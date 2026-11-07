@@ -1,9 +1,17 @@
-import { TraceResult, traceRays, type Level } from './engine';
+import { MATERIALS, TraceResult, traceRays, type Impact, type Level } from './engine';
 import { FrameStats } from './game/frame-stats';
 import { InputLayer } from './game/input';
-import { Interaction, isRotatable, ringRadius, type MirrorChange } from './game/interaction';
+import {
+  Interaction,
+  armStart,
+  isHalfTurnSymmetric,
+  isMedium,
+  isRotatable,
+  ringRadius,
+  type PieceChange,
+} from './game/interaction';
 import { GameLoop } from './game/loop';
-import { nextHint, rotationSteps, starsFor } from './game/rules';
+import { nextHint, rotationSteps, starsFor, type HintKind } from './game/rules';
 import type { Settings } from './game/settings';
 import { displayAngle } from './game/snap';
 import { toEngineLevel, type LevelDefinition } from './levels/schema';
@@ -31,6 +39,8 @@ export interface GameViewHooks {
   onAngleStep?(pointerType: string): void;
   /** A piece was put down or turned. */
   onCommit?(): void;
+  /** The light paths were re-traced. */
+  onTrace?(): void;
 }
 
 /**
@@ -47,7 +57,7 @@ export class GameView {
   rotations = 0;
   won = false;
   time = 0;
-  /** Index of the hinted mirror, or -1. */
+  /** Unified index of the hinted piece, or -1. */
   hint = -1;
 
   private readonly scene: SceneRenderer;
@@ -110,22 +120,46 @@ export class GameView {
     return this.definition ? starsFor(this.rotations, this.definition.stars) : 3;
   }
 
-  /** Highlights the next mirror of the reference solution. Returns what to do with it. */
-  showHint(): 'rotate' | 'move' | null {
+  /** Highlights the next piece of the reference solution. Returns what to do with it. */
+  showHint(): HintKind | null {
     const { definition, level, interaction } = this;
     if (!definition || !level || !interaction || this.won) return null;
-    const index = nextHint(definition, level);
-    if (index < 0) return null;
-    this.hint = index;
+    const hint = nextHint(definition, level);
+    if (!hint) return null;
+    this.hint = interaction.indexOf(hint.id);
     this.hintUntil = this.time + HINT_DURATION;
-    const mirror = level.mirrors[index]!;
-    const step = definition.solution.find((s) => s.piece === mirror.id);
     this.hooks.onChange?.();
-    return step &&
-      (step.x !== undefined || step.y !== undefined) &&
-      (step.x !== mirror.x || step.y !== mirror.y)
-      ? 'move'
-      : 'rotate';
+    return hint.kind;
+  }
+
+  /**
+   * Entry and exit angles of the main ray through one block: the selected one,
+   * else the first one it crosses. Empty when there is no block in play.
+   */
+  opticsSummary(): string {
+    const { interaction, level } = this;
+    const media = level?.media;
+    if (!interaction || !media || media.length === 0) return '';
+    const selected = interaction.selectedPiece;
+    let index = selected && isMedium(selected) ? media.indexOf(selected) : -1;
+    const impacts = this.trace.impacts;
+    const isMain = (i: Impact): boolean =>
+      i.intensity >= 1 && (i.kind === 'interface' || i.kind === 'totalReflection');
+    if (index < 0) index = impacts.find(isMain)?.piece ?? -1;
+    const block = media[index];
+    if (!block) return 'La lumière ne traverse aucun bloc.';
+    const parts: string[] = [];
+    for (const im of impacts) {
+      if (!isMain(im) || im.piece !== index) continue;
+      if (im.kind === 'totalReflection') parts.push(`réflexion totale à ${deg(im.incidence)}`);
+      else
+        parts.push(
+          `${im.entering ? 'entrée' : 'sortie'} ${deg(im.incidence)} → ${deg(im.refraction)}`,
+        );
+      if (parts.length >= 3) break;
+    }
+    const name = MATERIALS[block.material].name;
+    return parts.length > 0 ? `${name} : ${parts.join(' · ')}` : `${name} : pas de lumière`;
   }
 
   /** Blocks or allows player input (pause, victory). */
@@ -141,10 +175,10 @@ export class GameView {
     this.loop.stop();
   }
 
-  private countMove(change: MirrorChange): void {
-    const m = this.level?.mirrors[change.index];
-    if (m)
-      this.rotations += rotationSteps(change.from.angle, change.to.angle, m.doubleSided !== false);
+  private countMove(change: PieceChange): void {
+    const p = this.interaction?.piece(change.index);
+    if (p)
+      this.rotations += rotationSteps(change.from.angle, change.to.angle, isHalfTurnSymmetric(p));
     if (this.hint === change.index) this.hint = -1;
     this.hooks.onCommit?.();
     this.hooks.onChange?.();
@@ -160,6 +194,7 @@ export class GameView {
       traceRays(level, {}, this.trace);
       this.scene.traceChanged();
       interaction.dirty = false;
+      this.hooks.onTrace?.();
     }
     // Victory once the player has let go of a piece with every target lit.
     const solved =
@@ -198,12 +233,13 @@ export class GameView {
       ? 0.8
       : 0.55 + 0.35 * Math.sin(this.time * Math.PI * 2 * 0.9);
     view.selected = interaction?.selected ?? -1;
-    const m = interaction?.selectedMirror;
+    const m = interaction?.selectedPiece;
     if (!interaction || !m) return;
     view.rotatable = isRotatable(m);
     view.dragging = interaction.mode === 'rotate' || interaction.mode === 'move';
     view.ringRadius = ringRadius(m);
-    const shown = displayAngle(m.angle, m.doubleSided !== false);
+    view.armStart = armStart(m);
+    const shown = displayAngle(m.angle, isHalfTurnSymmetric(m));
     if (shown !== this.labelAngle) {
       this.labelAngle = shown;
       view.label = `${shown}°`;
@@ -214,4 +250,9 @@ export class GameView {
         ? 1 + BOUNCE_AMPLITUDE * Math.sin(Math.PI * p)
         : 1;
   }
+}
+
+/** Angle in degrees, French style: 35,2°. */
+function deg(value: number): string {
+  return `${value.toFixed(1).replace('.', ',')}°`;
 }

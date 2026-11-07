@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { traceRays } from '../src/engine';
-import { canPlaceMirror } from '../src/game/placement';
+import { canPlace } from '../src/game/placement';
 import { nextHint, solutionRotations } from '../src/game/rules';
 import {
   LEVELS,
@@ -28,6 +28,22 @@ describe('level catalogue', () => {
     expect(reflection.some((l) => l.title === 'Le Zigzag')).toBe(true);
   });
 
+  it('has 10 refraction levels with water, glass, diamond and total reflection', () => {
+    const refraction = LEVELS.filter((l) => l.mechanic === 'refraction');
+    expect(refraction).toHaveLength(10);
+    expect(refraction.some((l) => l.title === 'Trois milieux')).toBe(true);
+    const materials = new Set(
+      refraction.flatMap((l) => l.pieces.flatMap((p) => (p.type === 'medium' ? [p.material] : []))),
+    );
+    expect([...materials].sort()).toEqual(['diamond', 'glass', 'water']);
+    const withTotalReflection = refraction.filter((def) =>
+      traceRays(applySolution(def, toEngineLevel(def))).impacts.some(
+        (i) => i.kind === 'totalReflection' && i.intensity === 1,
+      ),
+    );
+    expect(withTotalReflection.length).toBeGreaterThanOrEqual(2);
+  });
+
   describe.each(LEVELS.map((l) => [`${l.id} ${l.title}`, l] as const))('%s', (_, def) => {
     it('is not already solved at the start', () => {
       expect(traceRays(toEngineLevel(def)).allTargetsHit).toBe(false);
@@ -37,13 +53,17 @@ describe('level catalogue', () => {
       const level = applySolution(def, toEngineLevel(def));
       const result = traceRays(level);
       expect(result.allTargetsHit).toBe(true);
-      expect(nextHint(def, level)).toBe(-1);
+      expect(nextHint(def, level)).toBeNull();
     });
 
     it('has every mirror legally placed, at the start and once solved', () => {
       for (const level of [toEngineLevel(def), applySolution(def, toEngineLevel(def))]) {
         level.mirrors.forEach((m, i) => {
-          expect(canPlaceMirror(level, i, m.x, m.y, m.angle), m.id).toBe(true);
+          expect(canPlace(level, 'mirror', i, m.x, m.y, m.angle), m.id).toBe(true);
+        });
+        level.media?.forEach((m, i) => {
+          if (m.stored !== true)
+            expect(canPlace(level, 'medium', i, m.x, m.y, m.angle), m.id).toBe(true);
         });
       }
     });
@@ -55,7 +75,7 @@ describe('level catalogue', () => {
     it('hints at the first piece of the solution at the start', () => {
       const level = toEngineLevel(def);
       const first = def.solution[0]!.piece;
-      expect(level.mirrors[nextHint(def, level)]?.id).toBe(first);
+      expect(nextHint(def, level)?.id).toBe(first);
     });
   });
 });
@@ -106,7 +126,7 @@ describe('parseLevel', () => {
       expect(msg).toContain('type de pièce inconnu « laser »');
       expect(msg).toContain('identifiant « m » en double');
       expect(msg).toContain('stars');
-      expect(msg).toContain('aucun miroir « nope »');
+      expect(msg).toContain('aucune pièce mobile « nope »');
     }
   });
 

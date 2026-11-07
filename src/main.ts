@@ -20,6 +20,7 @@ let ui: GameUi | null = null;
 const game = new GameView(canvas, settings, {
   onChange: () => ui?.refreshHud(),
   onWin: () => ui?.onWin(),
+  onTrace: () => ui?.refreshOptics(),
   onAngleStep: (pointerType) => {
     if (pointerType === 'touch') vibrate(8);
   },

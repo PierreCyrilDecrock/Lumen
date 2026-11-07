@@ -1,0 +1,44 @@
+{
+  "id": "f03",
+  "title": "Lame inclinée",
+  "mechanic": "refraction",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 30,
+      "y": 200,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 332.3,
+      "y": 223.3,
+      "radius": 8
+    }
+  ],
+  "pieces": [
+    {
+      "type": "medium",
+      "id": "slab",
+      "material": "glass",
+      "x": 190,
+      "y": 200,
+      "width": 120,
+      "height": 70,
+      "angle": 0
+    }
+  ],
+  "stars": [2, 4],
+  "solution": [
+    {
+      "piece": "slab",
+      "angle": 30
+    }
+  ]
+}

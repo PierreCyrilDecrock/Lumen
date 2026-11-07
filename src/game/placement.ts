@@ -1,24 +1,94 @@
 import {
-  endpointsOf,
-  pointSegmentDistance,
-  segmentSegmentDistance,
+  pointPolygonDistance,
+  polygonsOverlap,
+  rectCorners,
   type Level,
-  type SegmentCoords,
+  type Medium,
+  type Mirror,
 } from '../engine';
 import { MIRROR_WIDTH, WALL_THICKNESS } from '../render/theme';
 
-/** Free space kept between a mirror and the board edge. */
+export type PieceKind = 'mirror' | 'medium';
+
+/** Free space kept between a piece and the board edge. */
 const EDGE_MARGIN = 4;
 /** Clearance around emitters, measured from their centre. */
-const EMITTER_CLEARANCE = 18;
+const EMITTER_CLEARANCE = 15;
+/** Extra width around mirrors so two mirrors never touch. */
+const MIRROR_GAP = 2;
 
-const mine: SegmentCoords = { ax: 0, ay: 0, bx: 0, by: 0 };
-const other: SegmentCoords = { ax: 0, ay: 0, bx: 0, by: 0 };
+const candidate = new Float64Array(8);
+const other = new Float64Array(8);
+const NO_MEDIA: readonly Medium[] = [];
+
+function mirrorPolygon(
+  m: Mirror,
+  x: number,
+  y: number,
+  angle: number,
+  out: Float64Array,
+  extra = 0,
+) {
+  return rectCorners(x, y, m.length, MIRROR_WIDTH + extra, angle, out);
+}
 
 /**
- * True when mirror `index` can stand at (x, y, angle): fully on the board and
- * clear of walls, other mirrors, targets and emitters.
+ * True when piece `index` of `kind` can stand at (x, y, angle): fully on the
+ * board and clear of walls, mirrors, media, targets and emitters.
  */
+export function canPlace(
+  level: Level,
+  kind: PieceKind,
+  index: number,
+  x: number,
+  y: number,
+  angle: number,
+): boolean {
+  const media = level.media ?? NO_MEDIA;
+  const self = kind === 'mirror' ? level.mirrors[index] : media[index];
+  if (!self) return false;
+  if (kind === 'mirror') mirrorPolygon(self as Mirror, x, y, angle, candidate);
+  else rectCorners(x, y, (self as Medium).width, (self as Medium).height, angle, candidate);
+
+  for (let i = 0; i < 4; i++) {
+    const px = candidate[i * 2]!;
+    const py = candidate[i * 2 + 1]!;
+    if (
+      px < EDGE_MARGIN ||
+      py < EDGE_MARGIN ||
+      px > level.width - EDGE_MARGIN ||
+      py > level.height - EDGE_MARGIN
+    ) {
+      return false;
+    }
+  }
+  for (const w of level.walls) {
+    if (polygonsOverlap(candidate, rectCorners(w.x, w.y, w.length, WALL_THICKNESS, w.angle, other)))
+      return false;
+  }
+  for (let i = 0; i < level.mirrors.length; i++) {
+    if (kind === 'mirror' && i === index) continue;
+    const m = level.mirrors[i]!;
+    const gap = kind === 'mirror' ? MIRROR_GAP * 2 : 0;
+    if (polygonsOverlap(candidate, mirrorPolygon(m, m.x, m.y, m.angle, other, gap))) return false;
+  }
+  for (let i = 0; i < media.length; i++) {
+    if (kind === 'medium' && i === index) continue;
+    const m = media[i]!;
+    if (m.stored === true) continue;
+    if (polygonsOverlap(candidate, rectCorners(m.x, m.y, m.width, m.height, m.angle, other)))
+      return false;
+  }
+  for (const t of level.targets) {
+    if (pointPolygonDistance(t.x, t.y, candidate) < t.radius + 1) return false;
+  }
+  for (const e of level.emitters) {
+    if (pointPolygonDistance(e.x, e.y, candidate) < EMITTER_CLEARANCE) return false;
+  }
+  return true;
+}
+
+/** Shorthand for mirrors. */
 export function canPlaceMirror(
   level: Level,
   index: number,
@@ -26,46 +96,5 @@ export function canPlaceMirror(
   y: number,
   angle: number,
 ): boolean {
-  const mirror = level.mirrors[index];
-  if (!mirror) return false;
-  const m = endpointsOf(mirror, mine, x, y, angle);
-
-  const minX = EDGE_MARGIN;
-  const minY = EDGE_MARGIN;
-  const maxX = level.width - EDGE_MARGIN;
-  const maxY = level.height - EDGE_MARGIN;
-  if (!inside(m.ax, m.ay, minX, minY, maxX, maxY) || !inside(m.bx, m.by, minX, minY, maxX, maxY)) {
-    return false;
-  }
-
-  for (const wall of level.walls) {
-    const w = endpointsOf(wall, other);
-    const d = segmentSegmentDistance(m.ax, m.ay, m.bx, m.by, w.ax, w.ay, w.bx, w.by);
-    if (d < WALL_THICKNESS / 2 + MIRROR_WIDTH / 2) return false;
-  }
-  for (let i = 0; i < level.mirrors.length; i++) {
-    if (i === index) continue;
-    const o = endpointsOf(level.mirrors[i]!, other);
-    const d = segmentSegmentDistance(m.ax, m.ay, m.bx, m.by, o.ax, o.ay, o.bx, o.by);
-    if (d < MIRROR_WIDTH + 2) return false;
-  }
-  for (const t of level.targets) {
-    if (pointSegmentDistance(t.x, t.y, m.ax, m.ay, m.bx, m.by) < t.radius + MIRROR_WIDTH / 2 + 1)
-      return false;
-  }
-  for (const e of level.emitters) {
-    if (pointSegmentDistance(e.x, e.y, m.ax, m.ay, m.bx, m.by) < EMITTER_CLEARANCE) return false;
-  }
-  return true;
-}
-
-function inside(
-  x: number,
-  y: number,
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
-): boolean {
-  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  return canPlace(level, 'mirror', index, x, y, angle);
 }

@@ -1,0 +1,68 @@
+{
+  "id": "f02",
+  "title": "Le bon bloc",
+  "mechanic": "refraction",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 60,
+      "angle": 40
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 334.3,
+      "y": 387.2,
+      "radius": 8
+    }
+  ],
+  "pieces": [
+    {
+      "type": "medium",
+      "id": "water",
+      "material": "water",
+      "x": 90,
+      "y": 470,
+      "width": 160,
+      "height": 160,
+      "angle": 0,
+      "inTray": true
+    },
+    {
+      "type": "medium",
+      "id": "glass",
+      "material": "glass",
+      "x": 200,
+      "y": 470,
+      "width": 160,
+      "height": 160,
+      "angle": 0,
+      "inTray": true
+    },
+    {
+      "type": "medium",
+      "id": "diamond",
+      "material": "diamond",
+      "x": 300,
+      "y": 470,
+      "width": 160,
+      "height": 160,
+      "angle": 0,
+      "inTray": true
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "glass",
+      "x": 200,
+      "y": 250
+    }
+  ]
+}

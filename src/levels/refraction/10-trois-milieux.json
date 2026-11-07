@@ -1,0 +1,78 @@
+{
+  "id": "f10",
+  "title": "Trois milieux",
+  "mechanic": "refraction",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 30,
+      "y": 50,
+      "angle": 55
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 281.8,
+      "y": 514.1,
+      "radius": 8
+    }
+  ],
+  "pieces": [
+    {
+      "type": "medium",
+      "id": "water",
+      "material": "water",
+      "x": 70,
+      "y": 500,
+      "width": 130,
+      "height": 70,
+      "angle": 0,
+      "inTray": true
+    },
+    {
+      "type": "medium",
+      "id": "glass",
+      "material": "glass",
+      "x": 195,
+      "y": 500,
+      "width": 130,
+      "height": 70,
+      "angle": 345,
+      "inTray": true
+    },
+    {
+      "type": "medium",
+      "id": "diamond",
+      "material": "diamond",
+      "x": 320,
+      "y": 500,
+      "width": 130,
+      "height": 70,
+      "angle": 15,
+      "inTray": true
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "water",
+      "x": 110,
+      "y": 170
+    },
+    {
+      "piece": "glass",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "piece": "diamond",
+      "x": 280,
+      "y": 440
+    }
+  ]
+}

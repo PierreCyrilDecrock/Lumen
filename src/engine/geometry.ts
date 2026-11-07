@@ -132,3 +132,95 @@ export function segmentSegmentDistance(
 function orient(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
   return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
 }
+
+/**
+ * Corners of a rectangle centred on (cx, cy), `w` along its angle and `h` across,
+ * written into `out` as x0, y0, x1, y1… (4 corners, consistent winding).
+ */
+export function rectCorners(
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  angleDeg: number,
+  out: Float64Array = new Float64Array(8),
+): Float64Array {
+  const a = (angleDeg * Math.PI) / 180;
+  const ux = Math.cos(a);
+  const uy = Math.sin(a);
+  const hw = w / 2;
+  const hh = h / 2;
+  // Corners (-w,-h), (+w,-h), (+w,+h), (-w,+h) in the local frame (x along u, y along u turned +90°).
+  for (let i = 0; i < 4; i++) {
+    const sx = (i === 1 || i === 2 ? 1 : -1) * hw;
+    const sy = (i >= 2 ? 1 : -1) * hh;
+    out[i * 2] = cx + ux * sx - uy * sy;
+    out[i * 2 + 1] = cy + uy * sx + ux * sy;
+  }
+  return out;
+}
+
+/** Separating-axis test for two convex polygons (flat x, y arrays). Touching counts as apart. */
+export function polygonsOverlap(a: Float64Array, b: Float64Array, countA = 4, countB = 4): boolean {
+  return !hasSeparatingAxis(a, countA, b, countB) && !hasSeparatingAxis(b, countB, a, countA);
+}
+
+function hasSeparatingAxis(a: Float64Array, na: number, b: Float64Array, nb: number): boolean {
+  for (let i = 0; i < na; i++) {
+    const j = (i + 1) % na;
+    const nx = -(a[j * 2 + 1]! - a[i * 2 + 1]!);
+    const ny = a[j * 2]! - a[i * 2]!;
+    let minA = Infinity;
+    let maxA = -Infinity;
+    for (let k = 0; k < na; k++) {
+      const p = a[k * 2]! * nx + a[k * 2 + 1]! * ny;
+      minA = Math.min(minA, p);
+      maxA = Math.max(maxA, p);
+    }
+    let minB = Infinity;
+    let maxB = -Infinity;
+    for (let k = 0; k < nb; k++) {
+      const p = b[k * 2]! * nx + b[k * 2 + 1]! * ny;
+      minB = Math.min(minB, p);
+      maxB = Math.max(maxB, p);
+    }
+    const eps = 1e-9 * (Math.abs(nx) + Math.abs(ny));
+    if (maxA <= minB + eps || maxB <= minA + eps) return true;
+  }
+  return false;
+}
+
+/** True when (px, py) lies inside a convex polygon (either winding). */
+export function pointInPolygon(px: number, py: number, poly: Float64Array, count = 4): boolean {
+  let sign = 0;
+  for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count;
+    const c =
+      (poly[j * 2]! - poly[i * 2]!) * (py - poly[i * 2 + 1]!) -
+      (poly[j * 2 + 1]! - poly[i * 2 + 1]!) * (px - poly[i * 2]!);
+    if (c === 0) continue;
+    const s = c > 0 ? 1 : -1;
+    if (sign === 0) sign = s;
+    else if (s !== sign) return false;
+  }
+  return true;
+}
+
+/** Distance from a point to a convex polygon; 0 inside. */
+export function pointPolygonDistance(
+  px: number,
+  py: number,
+  poly: Float64Array,
+  count = 4,
+): number {
+  if (pointInPolygon(px, py, poly, count)) return 0;
+  let best = Infinity;
+  for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count;
+    best = Math.min(
+      best,
+      pointSegmentDistance(px, py, poly[i * 2]!, poly[i * 2 + 1]!, poly[j * 2]!, poly[j * 2 + 1]!),
+    );
+  }
+  return best;
+}

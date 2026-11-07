@@ -1,5 +1,5 @@
 import type { LevelDefinition } from '../levels/schema';
-import type { Level } from '../engine';
+import type { Level, Medium, Mirror } from '../engine';
 import { normalizeAngle, ANGLE_STEP } from './snap';
 
 /**
@@ -24,26 +24,37 @@ export function solutionRotations(def: LevelDefinition): number {
   let total = 0;
   for (const step of def.solution) {
     const piece = def.pieces.find((p) => p.id === step.piece);
-    if (!piece || piece.type !== 'mirror' || step.angle === undefined) continue;
-    total += rotationSteps(piece.angle, step.angle, piece.doubleSided !== false);
+    if (!piece || piece.type === 'wall' || step.angle === undefined) continue;
+    const symmetric = piece.type === 'medium' || piece.doubleSided !== false;
+    total += rotationSteps(piece.angle, step.angle, symmetric);
   }
   return total;
 }
 
+export type HintKind = 'rotate' | 'move' | 'place';
+
 /**
- * Index (in `level.mirrors`) of the first mirror that is not yet where the
- * reference solution puts it, or -1 when everything matches.
+ * First piece that is not yet where the reference solution puts it, and what
+ * to do with it; null when everything matches.
  */
-export function nextHint(def: LevelDefinition, level: Level): number {
+export function nextHint(
+  def: LevelDefinition,
+  level: Level,
+): { id: string; kind: HintKind } | null {
   for (const step of def.solution) {
-    const i = level.mirrors.findIndex((m) => m.id === step.piece);
-    const m = level.mirrors[i];
-    if (!m) continue;
-    const angleOk =
-      step.angle === undefined || rotationSteps(m.angle, step.angle, m.doubleSided !== false) === 0;
-    const xOk = step.x === undefined || step.x === m.x;
-    const yOk = step.y === undefined || step.y === m.y;
-    if (!angleOk || !xOk || !yOk) return i;
+    const piece: Mirror | Medium | undefined =
+      level.mirrors.find((m) => m.id === step.piece) ??
+      level.media?.find((m) => m.id === step.piece);
+    if (!piece) continue;
+    const medium = 'material' in piece;
+    if (medium && piece.stored === true) return { id: piece.id, kind: 'place' };
+    const xOk = step.x === undefined || step.x === piece.x;
+    const yOk = step.y === undefined || step.y === piece.y;
+    if (!xOk || !yOk) return { id: piece.id, kind: 'move' };
+    const symmetric = medium || piece.doubleSided !== false;
+    if (step.angle !== undefined && rotationSteps(piece.angle, step.angle, symmetric) !== 0) {
+      return { id: piece.id, kind: 'rotate' };
+    }
   }
-  return -1;
+  return null;
 }
