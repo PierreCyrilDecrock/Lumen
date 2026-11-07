@@ -1,4 +1,11 @@
-import { computeViewport, createViewport, type SafeArea, type Viewport } from './viewport';
+import {
+  LOGICAL_HEIGHT,
+  LOGICAL_WIDTH,
+  computeViewport,
+  createViewport,
+  type SafeArea,
+  type Viewport,
+} from './viewport';
 
 /**
  * Owns the full-screen canvas: keeps its backing store in sync with the CSS size,
@@ -20,7 +27,15 @@ export class GameCanvas {
     this.dirty = true;
   };
 
-  constructor(canvas: HTMLCanvasElement) {
+  /**
+   * @param logicalWidth Width of the logical board shown in this canvas.
+   * @param logicalHeight Height of the logical board.
+   */
+  constructor(
+    canvas: HTMLCanvasElement,
+    readonly logicalWidth = LOGICAL_WIDTH,
+    readonly logicalHeight = LOGICAL_HEIGHT,
+  ) {
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) throw new Error('Canvas 2D non disponible');
     this.canvas = canvas;
@@ -56,6 +71,8 @@ export class GameCanvas {
       rect.height,
       window.devicePixelRatio,
       this.safe,
+      this.logicalWidth,
+      this.logicalHeight,
     );
     if (this.canvas.width !== v.pixelWidth) this.canvas.width = v.pixelWidth;
     if (this.canvas.height !== v.pixelHeight) this.canvas.height = v.pixelHeight;

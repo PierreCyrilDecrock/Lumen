@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_BEAM_INTENSITY,
   DEFAULT_IMPACT_INTENSITY,
+  applyPreset,
   clamp01,
   createSettings,
+  currentPreset,
 } from '../src/game/settings';
 import { FrameStats } from '../src/game/frame-stats';
 
@@ -12,8 +14,8 @@ describe('settings', () => {
     const s = createSettings();
     expect(s.beamIntensity).toBe(DEFAULT_BEAM_INTENSITY);
     expect(s.impactIntensity).toBe(DEFAULT_IMPACT_INTENSITY);
-    expect(DEFAULT_BEAM_INTENSITY).toBe(0.55);
-    expect(DEFAULT_IMPACT_INTENSITY).toBe(0.45);
+    expect(DEFAULT_BEAM_INTENSITY).toBe(0.6);
+    expect(DEFAULT_IMPACT_INTENSITY).toBe(0.6);
     expect(s.reducedMotion).toBe(false);
     expect(createSettings(true).reducedMotion).toBe(true);
   });
@@ -23,6 +25,20 @@ describe('settings', () => {
     expect(clamp01(0.3)).toBe(0.3);
     expect(clamp01(7)).toBe(1);
     expect(clamp01(Number.NaN)).toBe(0);
+  });
+});
+
+describe('presets', () => {
+  it('applies Doux, Normal and Intense and recognises them', () => {
+    const s = createSettings();
+    expect(currentPreset(s)).toBe('normal');
+    applyPreset(s, 'doux');
+    expect([s.beamIntensity, s.impactIntensity]).toEqual([0.3, 0.3]);
+    expect(currentPreset(s)).toBe('doux');
+    applyPreset(s, 'intense');
+    expect([s.beamIntensity, s.impactIntensity]).toEqual([1, 1]);
+    s.beamIntensity = 0.42;
+    expect(currentPreset(s)).toBeNull();
   });
 });
 

@@ -246,6 +246,56 @@ body.app {
   width: 100%;
 }
 
+/* Settings screen. */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+
+.settings-preview {
+  flex: none;
+  height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.preset {
+  min-height: 44px;
+  border: 1px solid #2a3a52;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.preset[aria-pressed='true'] {
+  border-color: var(--cyan);
+  background: #0f2630;
+  color: var(--cyan);
+}
+
+.settings-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 /* Level select. */
 .level-chapters {
   flex: 1;

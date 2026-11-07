@@ -7,6 +7,8 @@ import { isCompleted, recordResult, writeSave, type SaveData } from '../storage'
 import { bindHistoryButtons, type Hud } from './hud';
 import { ICONS, fillIcons, starsHtml } from './icons';
 import { Router, type Route } from './router';
+import { SettingsScreen } from './settings';
+import type { Settings } from '../game/settings';
 
 function $<T extends HTMLElement = HTMLElement>(selector: string): T {
   const el = document.querySelector<T>(selector);
@@ -26,21 +28,27 @@ export class GameUi {
   private overlay: HTMLElement | null = null;
   private overlayReturnFocus: HTMLElement | null = null;
 
+  private readonly settingsScreen: SettingsScreen;
+
   constructor(
     private readonly game: GameView,
     private readonly save: SaveData,
+    settings: Settings,
   ) {
     this.screens = {
       menu: $('#screen-menu'),
       levels: $('#screen-levels'),
+      settings: $('#screen-settings'),
       play: $('#screen-play'),
     };
+    this.settingsScreen = new SettingsScreen(settings, save);
     this.router = new Router((route) => this.show(route));
     this.hud = bindHistoryButtons(() => game.interaction);
     fillIcons();
 
     $('#menu-play').addEventListener('click', () => this.playNext());
     $('#menu-levels').addEventListener('click', () => this.router.go({ name: 'levels' }));
+    $('#menu-settings').addEventListener('click', () => this.router.go({ name: 'settings' }));
     for (const el of document.querySelectorAll<HTMLElement>('[data-back]')) {
       el.addEventListener('click', () => this.router.back());
     }
@@ -243,6 +251,7 @@ export class GameUi {
     for (const [name, el] of Object.entries(this.screens)) el.hidden = name !== route.name;
 
     if (route.name === 'play') {
+      this.settingsScreen.hide();
       const def = findLevel(route.id)!;
       $('#play-title').textContent = def.title;
       $('#play-message').textContent = '';
@@ -255,6 +264,8 @@ export class GameUi {
     }
     this.game.stop();
     if (route.name === 'levels') this.renderLevels();
+    if (route.name === 'settings') this.settingsScreen.show();
+    else this.settingsScreen.hide();
     this.screens[route.name].querySelector<HTMLElement>('h1, h2')?.focus();
   }
 

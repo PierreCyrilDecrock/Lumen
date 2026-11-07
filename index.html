@@ -23,6 +23,7 @@
         <div class="menu-actions">
           <button id="menu-play" class="button button-primary" type="button">Jouer</button>
           <button id="menu-levels" class="button" type="button">Niveaux</button>
+          <button id="menu-settings" class="button" type="button">Réglages</button>
         </div>
       </div>
     </section>
@@ -40,6 +41,56 @@
         <span></span>
       </header>
       <div id="level-chapters" class="level-chapters"></div>
+    </section>
+
+    <section id="screen-settings" class="screen" hidden>
+      <header class="app-header">
+        <button
+          class="icon-button"
+          type="button"
+          data-back
+          data-icon="back"
+          aria-label="Retour au menu"
+        ></button>
+        <h1 tabindex="-1">Réglages</h1>
+        <span></span>
+      </header>
+      <div class="settings">
+        <div class="settings-preview">
+          <canvas
+            id="settings-preview"
+            class="game-canvas"
+            role="img"
+            aria-label="Aperçu : un faisceau, un miroir et une cible avec les réglages actuels"
+          ></canvas>
+        </div>
+        <div class="presets" role="group" aria-label="Préréglages">
+          <button class="preset" type="button" data-preset="doux" aria-pressed="false">Doux</button>
+          <button class="preset" type="button" data-preset="normal" aria-pressed="false">
+            Normal
+          </button>
+          <button class="preset" type="button" data-preset="intense" aria-pressed="false">
+            Intense
+          </button>
+        </div>
+        <label class="slider">
+          <span class="slider-label">Faisceau</span>
+          <input id="set-beam" type="range" min="0" max="100" step="5" />
+          <output id="set-beam-value" for="set-beam"></output>
+        </label>
+        <label class="slider">
+          <span class="slider-label">Impacts</span>
+          <input id="set-impact" type="range" min="0" max="100" step="5" />
+          <output id="set-impact-value" for="set-impact"></output>
+        </label>
+        <label class="toggle">
+          <input id="set-motion" type="checkbox" role="switch" />
+          <span>Réduire les animations</span>
+        </label>
+        <p class="settings-note">
+          Le cœur du faisceau reste toujours net et continu, quels que soient ces réglages.
+        </p>
+      </div>
     </section>
 
     <section id="screen-play" class="screen" hidden>

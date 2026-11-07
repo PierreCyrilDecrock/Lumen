@@ -1,7 +1,7 @@
-/** Versioned save in localStorage. Every access is defensive: never throws. */
+/** Versioned save in localStorage: one JSON object. Every access is defensive. */
 
 export const SAVE_KEY = 'lumen.save';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface LevelProgress {
   /** Best stars earned, 1 to 3. */
@@ -10,8 +10,18 @@ export interface LevelProgress {
   bestRotations: number;
 }
 
+export interface SavedSettings {
+  /** 0 to 1. */
+  beamIntensity: number;
+  /** 0 to 1. */
+  impactIntensity: number;
+  /** null: follow the system preference (prefers-reduced-motion). */
+  reducedMotion: boolean | null;
+}
+
 export interface SaveData {
   schemaVersion: number;
+  settings: SavedSettings;
   levels: Record<string, LevelProgress>;
   lastLevel: string | null;
 }
@@ -22,8 +32,19 @@ export interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
+export const DEFAULT_SAVED_SETTINGS: Readonly<SavedSettings> = {
+  beamIntensity: 0.6,
+  impactIntensity: 0.6,
+  reducedMotion: null,
+};
+
 export function emptySave(): SaveData {
-  return { schemaVersion: SCHEMA_VERSION, levels: {}, lastLevel: null };
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    settings: { ...DEFAULT_SAVED_SETTINGS },
+    levels: {},
+    lastLevel: null,
+  };
 }
 
 /** The browser storage, or null when it is unavailable (privacy mode, sandbox…). */
@@ -37,6 +58,9 @@ export function browserStorage(): StorageLike | null {
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const unit = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(Math.max(v, 0), 1) : fallback;
 
 /** Keeps only well-formed level entries. */
 function sanitizeLevels(raw: unknown): Record<string, LevelProgress> {
@@ -55,15 +79,26 @@ function sanitizeLevels(raw: unknown): Record<string, LevelProgress> {
   return out;
 }
 
+function sanitizeSettings(raw: unknown): SavedSettings {
+  const s = isRecord(raw) ? raw : {};
+  return {
+    beamIntensity: unit(s.beamIntensity, DEFAULT_SAVED_SETTINGS.beamIntensity),
+    impactIntensity: unit(s.impactIntensity, DEFAULT_SAVED_SETTINGS.impactIntensity),
+    reducedMotion: typeof s.reducedMotion === 'boolean' ? s.reducedMotion : null,
+  };
+}
+
 /**
  * Turns any parsed JSON into a current save, or null when it cannot be read
- * (unknown or future version, wrong shape).
+ * (unknown or future version, wrong shape). Version 1 had no settings.
  */
 export function migrate(raw: unknown): SaveData | null {
   if (!isRecord(raw) || typeof raw.schemaVersion !== 'number') return null;
-  if (raw.schemaVersion !== 1) return null;
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) return null;
   return {
     schemaVersion: SCHEMA_VERSION,
+    settings:
+      raw.schemaVersion === 1 ? { ...DEFAULT_SAVED_SETTINGS } : sanitizeSettings(raw.settings),
     levels: sanitizeLevels(raw.levels),
     lastLevel: typeof raw.lastLevel === 'string' ? raw.lastLevel : null,
   };

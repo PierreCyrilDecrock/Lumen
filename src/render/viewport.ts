@@ -52,11 +52,13 @@ export function computeViewport(
   cssHeight: number,
   devicePixelRatio: number,
   safe: SafeArea,
+  logicalWidth = LOGICAL_WIDTH,
+  logicalHeight = LOGICAL_HEIGHT,
 ): Viewport {
   const dpr = Math.min(Math.max(devicePixelRatio || 1, 1), MAX_DPR);
   const availWidth = Math.max(cssWidth - safe.left - safe.right, 1);
   const availHeight = Math.max(cssHeight - safe.top - safe.bottom, 1);
-  const scale = Math.min(availWidth / LOGICAL_WIDTH, availHeight / LOGICAL_HEIGHT);
+  const scale = Math.min(availWidth / logicalWidth, availHeight / logicalHeight);
 
   out.cssWidth = cssWidth;
   out.cssHeight = cssHeight;
@@ -64,8 +66,8 @@ export function computeViewport(
   out.pixelWidth = Math.max(Math.round(cssWidth * dpr), 1);
   out.pixelHeight = Math.max(Math.round(cssHeight * dpr), 1);
   out.scale = scale;
-  out.offsetX = safe.left + (availWidth - LOGICAL_WIDTH * scale) / 2;
-  out.offsetY = safe.top + (availHeight - LOGICAL_HEIGHT * scale) / 2;
+  out.offsetX = safe.left + (availWidth - logicalWidth * scale) / 2;
+  out.offsetY = safe.top + (availHeight - logicalHeight * scale) / 2;
   return out;
 }
 

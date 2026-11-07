@@ -3,7 +3,7 @@ import { parentOf, parseHash, toHash } from '../src/ui/router';
 
 describe('routes', () => {
   it('round-trips hashes', () => {
-    for (const hash of ['#/', '#/niveaux', '#/niveau/r03']) {
+    for (const hash of ['#/', '#/niveaux', '#/reglages', '#/niveau/r03']) {
       expect(toHash(parseHash(hash))).toBe(hash);
     }
   });
@@ -17,6 +17,7 @@ describe('routes', () => {
   it('knows the parent screen', () => {
     expect(parentOf({ name: 'play', id: 'r01' })).toEqual({ name: 'levels' });
     expect(parentOf({ name: 'levels' })).toEqual({ name: 'menu' });
+    expect(parentOf({ name: 'settings' })).toEqual({ name: 'menu' });
     expect(parentOf({ name: 'menu' })).toBeNull();
   });
 });

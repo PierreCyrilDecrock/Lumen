@@ -1,9 +1,11 @@
 /** Screens of the game, mapped to hash URLs so that GitHub Pages needs no rewrite. */
-export type Route = { name: 'menu' } | { name: 'levels' } | { name: 'play'; id: string };
+export type Route =
+  { name: 'menu' } | { name: 'levels' } | { name: 'settings' } | { name: 'play'; id: string };
 
 export function parseHash(hash: string): Route {
   const path = hash.replace(/^#\/?/, '');
   if (path === 'niveaux') return { name: 'levels' };
+  if (path === 'reglages') return { name: 'settings' };
   const play = /^niveau\/([\w-]+)$/.exec(path);
   if (play?.[1]) return { name: 'play', id: play[1] };
   return { name: 'menu' };
@@ -15,6 +17,8 @@ export function toHash(route: Route): string {
       return '#/';
     case 'levels':
       return '#/niveaux';
+    case 'settings':
+      return '#/reglages';
     case 'play':
       return `#/niveau/${route.id}`;
   }
@@ -23,7 +27,7 @@ export function toHash(route: Route): string {
 /** Screen that the in-game back button leads to. */
 export function parentOf(route: Route): Route | null {
   if (route.name === 'play') return { name: 'levels' };
-  if (route.name === 'levels') return { name: 'menu' };
+  if (route.name === 'levels' || route.name === 'settings') return { name: 'menu' };
   return null;
 }
 

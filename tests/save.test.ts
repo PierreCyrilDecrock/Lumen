@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_SAVED_SETTINGS,
   SAVE_KEY,
   emptySave,
   isCompleted,
@@ -63,9 +64,48 @@ describe('save', () => {
       lastLevel: 12,
     });
     expect(save).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
+      settings: DEFAULT_SAVED_SETTINGS,
       levels: { r01: { stars: 2, bestRotations: 7 } },
       lastLevel: null,
+    });
+  });
+
+  it('migrates a version 1 save, adding default settings', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      SAVE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        levels: { r01: { stars: 3, bestRotations: 3 } },
+        lastLevel: 'r01',
+      }),
+    );
+    const save = loadSave(storage);
+    expect(save.schemaVersion).toBe(2);
+    expect(save.settings).toEqual(DEFAULT_SAVED_SETTINGS);
+    expect(save.levels.r01).toEqual({ stars: 3, bestRotations: 3 });
+    expect(save.lastLevel).toBe('r01');
+  });
+
+  it('round-trips the settings and repairs corrupt values', () => {
+    const storage = new MemoryStorage();
+    const save = emptySave();
+    save.settings = { beamIntensity: 0.3, impactIntensity: 1, reducedMotion: true };
+    writeSave(save, storage);
+    expect(loadSave(storage).settings).toEqual(save.settings);
+
+    storage.setItem(
+      SAVE_KEY,
+      JSON.stringify({
+        schemaVersion: 2,
+        settings: { beamIntensity: 7, impactIntensity: 'x', reducedMotion: 'no' },
+      }),
+    );
+    expect(loadSave(storage).settings).toEqual({
+      beamIntensity: 1,
+      impactIntensity: DEFAULT_SAVED_SETTINGS.impactIntensity,
+      reducedMotion: null,
     });
   });
 

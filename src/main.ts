@@ -12,9 +12,11 @@ if (!canvas) throw new Error('Canvas #game introuvable');
 // iOS Safari ignores touch-action for pinch on some versions.
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
-const settings = createSettings();
-followReducedMotion(settings);
 const save = loadSave();
+const settings = createSettings();
+settings.beamIntensity = save.settings.beamIntensity;
+settings.impactIntensity = save.settings.impactIntensity;
+followReducedMotion(settings, () => save.settings.reducedMotion);
 
 let ui: GameUi | null = null;
 const game = new GameView(canvas, settings, {
@@ -25,7 +27,7 @@ const game = new GameView(canvas, settings, {
     if (pointerType === 'touch') vibrate(8);
   },
 });
-ui = new GameUi(game, save);
+ui = new GameUi(game, save, settings);
 
 bindKeyboard({
   interaction: () => (ui?.router.current.name === 'play' ? game.interaction : null),
