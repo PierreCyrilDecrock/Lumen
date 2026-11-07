@@ -1,0 +1,56 @@
+{
+  "id": "p11",
+  "title": "Tri des couleurs",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 15,
+      "y": 180.7,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "yellow",
+      "radius": 14,
+      "x": 318.9,
+      "y": 223.9
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 130,
+      "y": 160,
+      "angle": 0,
+      "rotatable": false
+    },
+    {
+      "type": "filter",
+      "id": "fy",
+      "x": 330,
+      "y": 500,
+      "angle": 105,
+      "colors": ["yellow"],
+      "length": 40,
+      "movable": true,
+      "rotatable": false
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "fy",
+      "x": 280,
+      "y": 210
+    }
+  ]
+}

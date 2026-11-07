@@ -1,11 +1,14 @@
 import type {
+  ColorTarget,
   Crystal,
   Diffuser,
   Emitter,
+  Filter,
   Fog,
   Level,
   Medium,
   Mirror,
+  Prism,
   Target,
   Wall,
 } from '../src/engine';
@@ -84,4 +87,41 @@ export const fog = (x: number, y: number, width: number, height: number, density
   height,
   angle: 0,
   density,
+});
+
+export const prism = (x: number, y: number, angle = 0, size = 90): Prism => ({
+  id: id('p'),
+  x,
+  y,
+  angle,
+  size,
+});
+
+export const filter = (
+  x: number,
+  y: number,
+  angle: number,
+  bands: number[],
+  length = 40,
+): Filter => ({
+  id: id('g'),
+  x,
+  y,
+  angle,
+  length,
+  bands,
+});
+
+export const colorTarget = (
+  x: number,
+  y: number,
+  color: ColorTarget['color'],
+  radius = 12,
+): ColorTarget => ({
+  id: id('k'),
+  x,
+  y,
+  radius,
+  color,
+  tolerance: 0.2,
 });

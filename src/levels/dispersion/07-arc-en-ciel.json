@@ -1,0 +1,78 @@
+{
+  "id": "p07",
+  "title": "Arc-en-ciel",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 15,
+      "y": 180.7,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "red",
+      "radius": 6,
+      "x": 370.9,
+      "y": 196.6
+    },
+    {
+      "id": "t2",
+      "color": "orange",
+      "radius": 6,
+      "x": 371,
+      "y": 214.2
+    },
+    {
+      "id": "t3",
+      "color": "yellow",
+      "radius": 6,
+      "x": 371,
+      "y": 233.9
+    },
+    {
+      "id": "t4",
+      "color": "green",
+      "radius": 6,
+      "x": 371.1,
+      "y": 261.7
+    },
+    {
+      "id": "t5",
+      "color": "blue",
+      "radius": 6,
+      "x": 371.1,
+      "y": 298.2
+    },
+    {
+      "id": "t6",
+      "color": "violet",
+      "radius": 6,
+      "x": 371.1,
+      "y": 358.1
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 130,
+      "y": 160,
+      "angle": 45
+    }
+  ],
+  "stars": [3, 6],
+  "solution": [
+    {
+      "piece": "prism",
+      "angle": 0
+    }
+  ]
+}

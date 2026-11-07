@@ -1,0 +1,80 @@
+{
+  "id": "p12",
+  "title": "Spectre",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 15,
+      "y": 153.4,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "cyan",
+      "x": 279.2,
+      "y": 189.7
+    },
+    {
+      "id": "t2",
+      "color": "red",
+      "radius": 7,
+      "x": 338.3,
+      "y": 173.6
+    },
+    {
+      "id": "t3",
+      "color": "yellow",
+      "radius": 7,
+      "x": 209.9,
+      "y": 157.9
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 110,
+      "y": 140,
+      "angle": 75
+    },
+    {
+      "type": "mirror",
+      "id": "mg",
+      "x": 248.8,
+      "y": 188.4,
+      "angle": 45,
+      "length": 12
+    },
+    {
+      "type": "mirror",
+      "id": "mb",
+      "x": 282.4,
+      "y": 231.1,
+      "angle": 30,
+      "length": 12
+    }
+  ],
+  "stars": [9, 15],
+  "solution": [
+    {
+      "piece": "prism",
+      "angle": 0
+    },
+    {
+      "piece": "mg",
+      "angle": 15
+    },
+    {
+      "piece": "mb",
+      "angle": 150
+    }
+  ]
+}

@@ -52,6 +52,15 @@ describe('level catalogue', () => {
     expect(diffusion.some((l) => l.pieces.some((p) => p.type === 'fog'))).toBe(true);
   });
 
+  it('has 12 dispersion levels including « Arc-en-ciel » and « Mélange »', () => {
+    const dispersion = LEVELS.filter((l) => l.mechanic === 'dispersion');
+    expect(dispersion).toHaveLength(12);
+    const rainbow = dispersion.find((l) => l.title === 'Arc-en-ciel')!;
+    expect(new Set(rainbow.colorTargets.map((t) => t.color)).size).toBe(6);
+    const mix = dispersion.find((l) => l.title === 'Mélange')!;
+    expect(mix.colorTargets.map((t) => t.color)).toEqual(['yellow']);
+  });
+
   describe.each(LEVELS.map((l) => [`${l.id} ${l.title}`, l] as const))('%s', (_, def) => {
     it('is not already solved at the start', () => {
       expect(traceRays(toEngineLevel(def)).solved).toBe(false);

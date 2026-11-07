@@ -1,4 +1,4 @@
-import { CONE_FIELDS, type BeamSegment, type Medium, type TraceResult } from '../engine';
+import { CONE_FIELDS, SPECTRUM, type BeamSegment, type Medium, type TraceResult } from '../engine';
 import type { GameCanvas } from './canvas';
 import { CONE_LENGTH, HALO_AIR, MEDIUM_STYLE } from './theme';
 
@@ -156,6 +156,7 @@ export class HaloLayer {
           s.g !== first.g ||
           s.b !== first.b ||
           s.medium !== first.medium ||
+          s.band !== first.band ||
           s.intensity !== first.intensity
         ) {
           break;
@@ -176,11 +177,18 @@ export class HaloLayer {
  * (water cyan, glass lavender, diamond pink); coloured light keeps its colour.
  */
 function haloColor(s: BeamSegment, alpha: number, media: readonly Medium[]): string {
-  const white = s.r === 1 && s.g === 1 && s.b === 1;
+  const white = s.band < 0;
   const medium = s.medium >= 0 ? media[s.medium] : undefined;
   const tint = medium ? MEDIUM_STYLE[medium.material].halo : HALO_AIR;
-  const r = white ? tint[0] : Math.round(s.r * 255);
-  const g = white ? tint[1] : Math.round(s.g * 255);
-  const b = white ? tint[2] : Math.round(s.b * 255);
+  const band = white ? null : hexToRgb(SPECTRUM[s.band]!.hex);
+  const r = band ? band[0] : tint[0];
+  const g = band ? band[1] : tint[1];
+  const b = band ? band[2] : tint[2];
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
+}
+
+/** "#RRGGBB" to [r, g, b] in 0-255. */
+export function hexToRgb(hex: string): [number, number, number] {
+  const v = parseInt(hex.slice(1), 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
 }

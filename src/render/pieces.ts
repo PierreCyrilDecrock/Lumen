@@ -1,4 +1,17 @@
-import type { Crystal, Diffuser, Emitter, Medium, Mirror, Target, Wall } from '../engine';
+import {
+  COLOR_HEX,
+  SPECTRUM,
+  type ColorTarget,
+  type Crystal,
+  type Diffuser,
+  type Emitter,
+  type Filter,
+  type Medium,
+  type Mirror,
+  type Prism,
+  type Target,
+  type Wall,
+} from '../engine';
 import { DEG_TO_RAD } from '../engine';
 import {
   AMBER,
@@ -15,6 +28,8 @@ import {
   MIRROR_BODY,
   MIRROR_SHINE,
   MIRROR_WIDTH,
+  PRISM_EDGE,
+  PRISM_FILL,
   WALL_FILL,
   WALL_LINE,
   WALL_THICKNESS,
@@ -250,4 +265,89 @@ export function drawCrystal(ctx: CanvasRenderingContext2D, c: Crystal, progress:
   ctx.lineWidth = 1;
   ctx.strokeStyle = progress >= 1 ? 'rgba(2, 3, 10, 0.35)' : 'rgba(94, 108, 133, 0.6)';
   ctx.stroke();
+}
+
+/** Prism: a discreet glass triangle with a light rim. */
+export function drawPrism(
+  ctx: CanvasRenderingContext2D,
+  p: Prism,
+  scale = 1,
+  selected = false,
+): void {
+  const r = p.size / Math.sqrt(3);
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.angle * DEG_TO_RAD);
+  if (scale !== 1) ctx.scale(scale, scale);
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const a = ((-90 + i * 120) * Math.PI) / 180;
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = PRISM_FILL;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = selected ? 2.5 : 1.5;
+  ctx.strokeStyle = selected ? CYAN : PRISM_EDGE;
+  ctx.stroke();
+  if (p.movable === true) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Colour filter: a thin plate striped with the colours it lets through. */
+export function drawFilter(
+  ctx: CanvasRenderingContext2D,
+  f: Filter,
+  scale = 1,
+  selected = false,
+): void {
+  const half = f.length / 2;
+  const w = MIRROR_WIDTH;
+  ctx.save();
+  ctx.translate(f.x, f.y);
+  ctx.rotate(f.angle * DEG_TO_RAD);
+  if (scale !== 1) ctx.scale(scale, scale);
+  const step = f.length / Math.max(1, f.bands.length);
+  ctx.globalAlpha = 0.85;
+  for (let i = 0; i < f.bands.length; i++) {
+    ctx.fillStyle = SPECTRUM[f.bands[i]!]?.hex ?? '#FFFFFF';
+    ctx.fillRect(-half + i * step, -w / 2, step, w);
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = selected ? 2 : 1;
+  ctx.strokeStyle = selected ? CYAN : 'rgba(255, 255, 255, 0.6)';
+  ctx.strokeRect(-half, -w / 2, f.length, w);
+  ctx.restore();
+}
+
+/**
+ * Colour target: a ring in the colour it needs, and a core showing the colour
+ * it currently receives (full when lit).
+ */
+export function drawColorTarget(
+  ctx: CanvasRenderingContext2D,
+  t: ColorTarget,
+  lit: boolean,
+  receivedCss: string | null,
+): void {
+  const hex = COLOR_HEX[t.color];
+  ctx.beginPath();
+  ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#0B0F1A';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = hex;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(t.x, t.y, t.radius * (lit ? 0.6 : 0.38), 0, Math.PI * 2);
+  ctx.fillStyle = lit ? hex : (receivedCss ?? 'rgba(138, 147, 166, 0.35)');
+  ctx.fill();
 }

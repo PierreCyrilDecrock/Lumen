@@ -1,0 +1,52 @@
+{
+  "id": "p04",
+  "title": "Miroir violet",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 15,
+      "y": 228,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "violet",
+      "radius": 8,
+      "x": 355.5,
+      "y": 301.5
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 150,
+      "y": 200,
+      "angle": 0,
+      "rotatable": false
+    },
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 303.7,
+      "y": 314.2,
+      "angle": 75,
+      "length": 12
+    }
+  ],
+  "stars": [4, 7],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 15
+    }
+  ]
+}

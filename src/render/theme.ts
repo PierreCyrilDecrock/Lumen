@@ -54,3 +54,7 @@ export const CRYSTAL_DIM = '#5E6C85';
 export const CRYSTAL_LIT: readonly [number, number, number] = [200, 245, 255];
 /** Fan cones in the halo layer. */
 export const CONE_LENGTH = 220;
+
+/** Prism: discreet glass triangle with a light rim. */
+export const PRISM_FILL = 'rgba(200, 220, 255, 0.07)';
+export const PRISM_EDGE = 'rgba(232, 242, 255, 0.75)';

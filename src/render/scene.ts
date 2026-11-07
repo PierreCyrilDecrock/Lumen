@@ -1,12 +1,15 @@
 import type { Level, Medium, TraceResult } from '../engine';
-import { TARGET_THRESHOLD } from '../engine';
+import { SPECTRUM, TARGET_THRESHOLD } from '../engine';
 import type { Settings } from '../game/settings';
 import type { GameCanvas } from './canvas';
 import { HaloLayer } from './halo';
 import { FogPainter } from './fog';
 import {
+  drawColorTarget,
   drawCrystal,
   drawDiffuser,
+  drawFilter,
+  drawPrism,
   drawEmitter,
   drawMedium,
   drawMirror,
@@ -58,11 +61,33 @@ export class SceneRenderer {
     this.level = level;
     this.trace = trace;
     this.halo.invalidate();
+    this.refreshColorCss();
   }
 
   /** Call after re-tracing into the same TraceResult. */
   traceChanged(): void {
     this.halo.invalidate();
+    this.refreshColorCss();
+  }
+
+  /** CSS colour received by each colour target, computed once per trace. */
+  private colorCss: (string | null)[] = [];
+
+  private refreshColorCss(): void {
+    const trace = this.trace;
+    const count = this.level?.colorTargets?.length ?? 0;
+    this.colorCss.length = count;
+    if (!trace) return;
+    for (let i = 0; i < count; i++) {
+      const r = trace.colorLight[i * 3] ?? 0;
+      const g = trace.colorLight[i * 3 + 1] ?? 0;
+      const b = trace.colorLight[i * 3 + 2] ?? 0;
+      const max = Math.max(r, g, b);
+      this.colorCss[i] =
+        max > 0
+          ? `rgb(${Math.round((r / max) * 255)}, ${Math.round((g / max) * 255)}, ${Math.round((b / max) * 255)})`
+          : null;
+    }
   }
 
   /**
@@ -91,6 +116,12 @@ export class SceneRenderer {
       const isSelected = sel !== null && sel.selected === mirrorCount + i;
       drawMedium(ctx, media[i]!, isSelected ? sel.bounce : 1, isSelected);
     }
+    const prisms = level.prisms ?? [];
+    const prismOffset = mirrorCount + media.length + (level.diffusers?.length ?? 0);
+    for (let i = 0; i < prisms.length; i++) {
+      const isSelected = sel !== null && sel.selected === prismOffset + i;
+      drawPrism(ctx, prisms[i]!, isSelected ? sel.bounce : 1, isSelected);
+    }
     for (const wall of level.walls) drawWall(ctx, wall);
     for (let i = 0; i < mirrorCount; i++) {
       const isSelected = sel !== null && sel.selected === i;
@@ -102,8 +133,19 @@ export class SceneRenderer {
       const isSelected = sel !== null && sel.selected === diffuserOffset + i;
       drawDiffuser(ctx, diffusers[i]!, isSelected ? sel.bounce : 1, isSelected);
     }
+    const filters = level.filters ?? [];
+    const filterOffset = prismOffset + prisms.length;
+    for (let i = 0; i < filters.length; i++) {
+      const isSelected = sel !== null && sel.selected === filterOffset + i;
+      drawFilter(ctx, filters[i]!, isSelected ? sel.bounce : 1, isSelected);
+    }
     for (let i = 0; i < level.targets.length; i++) {
       drawTarget(ctx, level.targets[i]!, trace.targetsHit[i] === true);
+    }
+    const colorTargets = level.colorTargets ?? [];
+    for (let i = 0; i < colorTargets.length; i++) {
+      const lit = trace.colorTargetsLit[i] === true;
+      drawColorTarget(ctx, colorTargets[i]!, lit, this.colorCss[i] ?? null);
     }
     const crystals = level.crystals ?? [];
     for (let i = 0; i < crystals.length; i++) {
@@ -131,11 +173,9 @@ export class SceneRenderer {
     let any = false;
     ctx.beginPath();
     for (const im of trace.impacts) {
-      if (
-        (im.kind !== 'interface' && im.kind !== 'totalReflection') ||
-        im.intensity < TARGET_THRESHOLD
-      )
-        continue;
+      const crossing =
+        im.kind === 'interface' || im.kind === 'totalReflection' || im.kind === 'prism';
+      if (!crossing || im.intensity < TARGET_THRESHOLD) continue;
       ctx.moveTo(im.x - im.nx * NORMAL_HALF, im.y - im.ny * NORMAL_HALF);
       ctx.lineTo(im.x + im.nx * NORMAL_HALF, im.y + im.ny * NORMAL_HALF);
       any = true;
@@ -218,51 +258,73 @@ export class SceneRenderer {
   }
 
   /**
-   * Sharp, continuous white core of the main rays, unaffected by any setting;
-   * faint rays (partial reflections) are thin, dim lines.
+   * Sharp, continuous core of the main rays, unaffected by any setting: white
+   * for white light, the band colour for coloured rays (added with 'lighter' so
+   * crossing colours mix). Faint rays (partial reflections, fans) are thin lines.
    */
   private drawCore(): void {
     const { trace, gc } = this;
     if (!trace || trace.segments.length === 0) return;
     const ctx = gc.ctx;
     gc.useLogicalSpace();
-    ctx.globalCompositeOperation = 'source-over';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = BEAM_CORE_COLOR;
-    for (let pass = 0; pass < 2; pass++) {
-      const strong = pass === 1;
-      ctx.globalAlpha = strong ? 1 : WEAK_ALPHA;
-      ctx.lineWidth = strong ? BEAM_CORE_WIDTH : WEAK_WIDTH;
-      ctx.beginPath();
-      const segments = trace.segments;
-      let prev = null;
-      for (let i = 0; i < segments.length; i++) {
-        const s = segments[i]!;
-        if (s.intensity >= TARGET_THRESHOLD !== strong) {
-          prev = null;
-          continue;
-        }
-        if (!prev || prev.x2 !== s.x1 || prev.y2 !== s.y1) ctx.moveTo(s.x1, s.y1);
-        ctx.lineTo(s.x2, s.y2);
-        prev = s;
-      }
-      ctx.stroke();
-    }
+    // Faint rays first, then strong coloured rays, then strong white rays.
+    for (let band = -1; band < SPECTRUM.length; band++) this.strokeBand(band, false);
+    for (let band = 0; band < SPECTRUM.length; band++) this.strokeBand(band, true);
+    this.strokeBand(-1, true);
     ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /** One stroke for all the strong (or faint) segments of a band. */
+  private strokeBand(band: number, strong: boolean): void {
+    const trace = this.trace!;
+    const ctx = this.gc.ctx;
+    const segments = trace.segments;
+    let any = false;
+    let prev = null;
+    ctx.beginPath();
+    for (let i = 0; i < segments.length; i++) {
+      const s = segments[i]!;
+      if (s.band !== band || s.intensity >= TARGET_THRESHOLD !== strong) {
+        prev = null;
+        continue;
+      }
+      if (!prev || prev.x2 !== s.x1 || prev.y2 !== s.y1) ctx.moveTo(s.x1, s.y1);
+      ctx.lineTo(s.x2, s.y2);
+      prev = s;
+      any = true;
+    }
+    if (!any) return;
+    ctx.strokeStyle = band < 0 ? BEAM_CORE_COLOR : SPECTRUM[band]!.hex;
+    ctx.globalCompositeOperation = band < 0 ? 'source-over' : 'lighter';
+    ctx.globalAlpha = strong ? 1 : WEAK_ALPHA;
+    ctx.lineWidth = strong ? BEAM_CORE_WIDTH : WEAK_WIDTH;
+    ctx.stroke();
   }
 }
 
-/** Piece at a unified index: mirrors, then media, then diffusers. */
+/** Piece at a unified index: mirrors, media, diffusers, prisms, then filters. */
 function pieceAt(level: Level, index: number): Placed | undefined {
-  const m = level.mirrors.length;
-  const n = level.media?.length ?? 0;
-  if (index < m) return level.mirrors[index];
-  if (index < m + n) return level.media?.[index - m];
-  return level.diffusers?.[index - m - n];
+  const groups: readonly (readonly Placed[] | undefined)[] = [
+    level.mirrors,
+    level.media,
+    level.diffusers,
+    level.prisms,
+    level.filters,
+  ];
+  let i = index;
+  for (const group of groups) {
+    const n = group?.length ?? 0;
+    if (i < n) return group?.[i];
+    i -= n;
+  }
+  return undefined;
 }
 
 function hintRadius(p: Placed): number {
+  if ('size' in p) return (p.size as number) / Math.sqrt(3) + 8;
   if ('width' in p && 'height' in p)
     return Math.hypot(p.width as number, p.height as number) / 2 + 6;
   return ('length' in p ? (p.length as number) : 40) / 2 + 10;

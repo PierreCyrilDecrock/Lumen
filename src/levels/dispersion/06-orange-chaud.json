@@ -1,0 +1,81 @@
+{
+  "id": "p06",
+  "title": "Orange chaud",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "s1",
+      "x": 40,
+      "y": 280,
+      "angle": 0
+    },
+    {
+      "id": "s2",
+      "x": 40,
+      "y": 80,
+      "angle": 0
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "orange",
+      "x": 250,
+      "y": 460
+    },
+    {
+      "id": "t2",
+      "color": "green",
+      "x": 330,
+      "y": 210
+    }
+  ],
+  "pieces": [
+    {
+      "type": "filter",
+      "id": "f1",
+      "x": 100,
+      "y": 280,
+      "angle": 90,
+      "colors": ["red", "orange", "yellow"]
+    },
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 250,
+      "y": 280,
+      "angle": 0
+    },
+    {
+      "type": "filter",
+      "id": "f2",
+      "x": 100,
+      "y": 80,
+      "angle": 90,
+      "colors": ["green"]
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 330,
+      "y": 80,
+      "angle": 90
+    }
+  ],
+  "stars": [6, 10],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    }
+  ]
+}

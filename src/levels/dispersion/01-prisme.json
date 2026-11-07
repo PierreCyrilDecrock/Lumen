@@ -1,0 +1,43 @@
+{
+  "id": "p01",
+  "title": "Prisme",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 54.7,
+      "y": 278.1,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "green",
+      "radius": 7,
+      "x": 310.5,
+      "y": 288.9
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 190,
+      "y": 250,
+      "angle": 30
+    }
+  ],
+  "stars": [2, 4],
+  "solution": [
+    {
+      "piece": "prism",
+      "angle": 0
+    }
+  ]
+}

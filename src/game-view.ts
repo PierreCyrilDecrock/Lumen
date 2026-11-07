@@ -4,10 +4,10 @@ import { InputLayer } from './game/input';
 import {
   Interaction,
   armStart,
-  isHalfTurnSymmetric,
   isMedium,
   isRotatable,
   ringRadius,
+  rotationPeriod,
   type PieceChange,
 } from './game/interaction';
 import { GameLoop } from './game/loop';
@@ -177,8 +177,7 @@ export class GameView {
 
   private countMove(change: PieceChange): void {
     const p = this.interaction?.piece(change.index);
-    if (p)
-      this.rotations += rotationSteps(change.from.angle, change.to.angle, isHalfTurnSymmetric(p));
+    if (p) this.rotations += rotationSteps(change.from.angle, change.to.angle, rotationPeriod(p));
     if (this.hint === change.index) this.hint = -1;
     this.hooks.onCommit?.();
     this.hooks.onChange?.();
@@ -238,7 +237,7 @@ export class GameView {
     view.dragging = interaction.mode === 'rotate' || interaction.mode === 'move';
     view.ringRadius = ringRadius(m);
     view.armStart = armStart(m);
-    const shown = displayAngle(m.angle, isHalfTurnSymmetric(m));
+    const shown = displayAngle(m.angle, rotationPeriod(m));
     if (shown !== this.labelAngle) {
       this.labelAngle = shown;
       view.label = `${shown}°`;

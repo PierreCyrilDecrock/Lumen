@@ -1,0 +1,83 @@
+{
+  "id": "p10",
+  "title": "Magenta",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "s1",
+      "x": 40,
+      "y": 500,
+      "angle": 0
+    },
+    {
+      "id": "s2",
+      "x": 350,
+      "y": 60,
+      "angle": 180
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "magenta",
+      "x": 200,
+      "y": 280
+    }
+  ],
+  "pieces": [
+    {
+      "type": "filter",
+      "id": "f1",
+      "x": 90,
+      "y": 500,
+      "angle": 90,
+      "colors": ["red"]
+    },
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 200,
+      "y": 500,
+      "angle": 0
+    },
+    {
+      "type": "filter",
+      "id": "f2",
+      "x": 300,
+      "y": 60,
+      "angle": 90,
+      "colors": ["blue"]
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 200,
+      "y": 60,
+      "angle": 90
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 290,
+      "y": 280,
+      "angle": 0,
+      "length": 120
+    }
+  ],
+  "stars": [6, 10],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 135
+    },
+    {
+      "piece": "m2",
+      "angle": 135
+    }
+  ]
+}

@@ -224,3 +224,23 @@ export function pointPolygonDistance(
   }
   return best;
 }
+
+/**
+ * Corners of an equilateral triangle of side `size` centred on (cx, cy), one
+ * corner pointing along angleDeg - 90°, written into `out` (3 corners).
+ */
+export function triangleCorners(
+  cx: number,
+  cy: number,
+  size: number,
+  angleDeg: number,
+  out: Float64Array = new Float64Array(6),
+): Float64Array {
+  const r = size / Math.sqrt(3);
+  for (let i = 0; i < 3; i++) {
+    const a = ((angleDeg - 90 + i * 120) * Math.PI) / 180;
+    out[i * 2] = cx + Math.cos(a) * r;
+    out[i * 2 + 1] = cy + Math.sin(a) * r;
+  }
+  return out;
+}

@@ -1,15 +1,21 @@
 import {
+  COLORS,
+  DEFAULT_COLOR_TOLERANCE,
   DEFAULT_CRYSTAL_RADIUS,
   DEFAULT_CRYSTAL_THRESHOLD,
   MATERIALS,
   SPREAD_MAX,
   SPREAD_MIN,
+  SPECTRUM,
+  type ColorName,
   type Diffuser,
+  type Filter,
   type Fog,
   type Level,
   type Material,
   type Medium,
   type Mirror,
+  type Prism,
   type Target,
   type Wall,
 } from '../engine';
@@ -100,6 +106,41 @@ export interface FogDef {
   density: number;
 }
 
+/** Glass prism (equilateral triangle) splitting white light into 6 colours. */
+export interface PrismDef {
+  type: 'prism';
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  size?: number;
+  rotatable?: boolean;
+  movable?: boolean;
+}
+
+/** Colour filter: lets only the listed spectrum colours through. */
+export interface FilterDef {
+  type: 'filter';
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  length?: number;
+  /** Spectrum colour names: red, orange, yellow, green, blue, violet. */
+  colors: string[];
+  rotatable?: boolean;
+  movable?: boolean;
+}
+
+export interface ColorTargetDef {
+  id: string;
+  x: number;
+  y: number;
+  color: ColorName;
+  radius?: number;
+  tolerance?: number;
+}
+
 export interface CrystalDef {
   id: string;
   x: number;
@@ -108,10 +149,13 @@ export interface CrystalDef {
   threshold?: number;
 }
 
-export type PieceDef = MirrorDef | WallDef | MediumDef | DiffuserDef | FogDef;
+export type PieceDef =
+  MirrorDef | WallDef | MediumDef | DiffuserDef | FogDef | PrismDef | FilterDef;
 
 /** Pieces the player can act on. */
-export type ActivePieceDef = MirrorDef | MediumDef | DiffuserDef;
+export type ActivePieceDef = MirrorDef | MediumDef | DiffuserDef | PrismDef | FilterDef;
+
+export const DEFAULT_PRISM_SIZE = 90;
 
 /** One step of the reference solution: final pose of a piece. */
 export interface SolutionStep {
@@ -133,6 +177,8 @@ export interface LevelDefinition {
   targets: TargetDef[];
   /** Crystals to light (diffusion levels). */
   crystals: CrystalDef[];
+  /** Targets that need a given colour (dispersion levels). */
+  colorTargets: ColorTargetDef[];
   pieces: PieceDef[];
   /** Maximum rotations (15° steps) for 3 and for 2 stars; finishing gives at least 1. */
   stars: [number, number];
@@ -282,8 +328,27 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
       });
     },
   );
-  if (targets.length + crystals.length === 0)
-    c.fail('targets', 'au moins une cible ou un cristal attendu');
+  const colorTargets = (
+    root.colorTargets === undefined ? [] : c.array(root.colorTargets, 'colorTargets')
+  ).map((t, i): ColorTargetDef => {
+    const path = `colorTargets[${i}]`;
+    const o = c.object(t, path) ?? {};
+    const color = o.color as ColorName;
+    if (!(typeof color === 'string' && color in COLORS)) {
+      c.fail(`${path}.color`, `une couleur parmi ${Object.keys(COLORS).join(', ')} attendue`);
+    }
+    return compact({
+      id: claimId(o, path),
+      x: inX(o, path),
+      y: inY(o, path),
+      color,
+      radius: c.optionalNumber(o, 'radius', path, 4),
+      tolerance: c.optionalNumber(o, 'tolerance', path, 0),
+    });
+  });
+  if (targets.length + crystals.length + colorTargets.length === 0) {
+    c.fail('targets', 'au moins une cible, un cristal ou une cible colorée attendu');
+  }
 
   const pieces = c.array(root.pieces, 'pieces').flatMap((p, i): PieceDef[] => {
     const path = `pieces[${i}]`;
@@ -347,6 +412,38 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
         }),
       ];
     }
+    if (o.type === 'prism') {
+      if (base.angle % 15 !== 0) c.fail(`${path}.angle`, 'multiple de 15° attendu');
+      return [
+        compact({
+          type: 'prism' as const,
+          ...base,
+          size: c.optionalNumber(o, 'size', path, 20),
+          rotatable: c.optionalBoolean(o, 'rotatable', path),
+          movable: c.optionalBoolean(o, 'movable', path),
+        }),
+      ];
+    }
+    if (o.type === 'filter') {
+      const colors = c.array(o.colors, `${path}.colors`);
+      const names: string[] = SPECTRUM.map((b) => b.name);
+      for (const name of colors) {
+        if (typeof name !== 'string' || !names.includes(name)) {
+          c.fail(`${path}.colors`, `couleur du spectre inconnue « ${String(name)} »`);
+        }
+      }
+      if (colors.length === 0) c.fail(`${path}.colors`, 'au moins une couleur attendue');
+      return [
+        compact({
+          type: 'filter' as const,
+          ...base,
+          length: c.optionalNumber(o, 'length', path, 10),
+          colors: colors as string[],
+          rotatable: c.optionalBoolean(o, 'rotatable', path),
+          movable: c.optionalBoolean(o, 'movable', path),
+        }),
+      ];
+    }
     if (o.type === 'fog') {
       return [
         {
@@ -374,8 +471,7 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     const o = c.object(s, path) ?? {};
     const piece = c.string(o, 'piece', path);
     const mirror = pieces.find(
-      (p): p is ActivePieceDef =>
-        (p.type === 'mirror' || p.type === 'medium' || p.type === 'diffuser') && p.id === piece,
+      (p): p is ActivePieceDef => p.type !== 'wall' && p.type !== 'fog' && p.id === piece,
     );
     if (piece && !mirror) c.fail(`${path}.piece`, `aucune pièce mobile « ${piece} »`);
     const step = compact({
@@ -418,6 +514,7 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     emitters,
     targets,
     crystals,
+    colorTargets,
     pieces,
     stars: [three, two],
     solution,
@@ -431,6 +528,8 @@ export function toEngineLevel(def: LevelDefinition): Level {
   const media: Medium[] = [];
   const diffusers: Diffuser[] = [];
   const fogs: Fog[] = [];
+  const prisms: Prism[] = [];
+  const filters: Filter[] = [];
   for (const p of def.pieces) {
     if (p.type === 'mirror') {
       const { type: _type, length, ...rest } = p;
@@ -438,6 +537,13 @@ export function toEngineLevel(def: LevelDefinition): Level {
     } else if (p.type === 'diffuser') {
       const { type: _type, length, ...rest } = p;
       diffusers.push({ ...rest, length: length ?? DEFAULT_MIRROR_LENGTH });
+    } else if (p.type === 'prism') {
+      const { type: _type, size, ...rest } = p;
+      prisms.push({ ...rest, size: size ?? DEFAULT_PRISM_SIZE });
+    } else if (p.type === 'filter') {
+      const { type: _type, length, colors, ...rest } = p;
+      const bands = colors.map((name) => SPECTRUM.findIndex((b) => b.name === name));
+      filters.push({ ...rest, length: length ?? DEFAULT_MIRROR_LENGTH, bands });
     } else if (p.type === 'fog') {
       const { type: _type, ...rest } = p;
       fogs.push({ ...rest });
@@ -463,6 +569,13 @@ export function toEngineLevel(def: LevelDefinition): Level {
     media,
     diffusers,
     fogs,
+    prisms,
+    filters,
+    colorTargets: def.colorTargets.map((t) => ({
+      ...t,
+      radius: t.radius ?? DEFAULT_TARGET_RADIUS,
+      tolerance: t.tolerance ?? DEFAULT_COLOR_TOLERANCE,
+    })),
     crystals: def.crystals.map((c) => ({
       ...c,
       radius: c.radius ?? DEFAULT_CRYSTAL_RADIUS,
@@ -474,10 +587,12 @@ export function toEngineLevel(def: LevelDefinition): Level {
 /** Applies the reference solution to an engine level built from `def`. */
 export function applySolution(def: LevelDefinition, level: Level): Level {
   for (const step of def.solution) {
-    const m: Mirror | Medium | Diffuser | undefined =
+    const m: Mirror | Medium | Diffuser | Prism | Filter | undefined =
       level.mirrors.find((mirror) => mirror.id === step.piece) ??
       level.media?.find((medium) => medium.id === step.piece) ??
-      level.diffusers?.find((d) => d.id === step.piece);
+      level.diffusers?.find((d) => d.id === step.piece) ??
+      level.prisms?.find((p) => p.id === step.piece) ??
+      level.filters?.find((f) => f.id === step.piece);
     if (!m) continue;
     if (step.angle !== undefined) m.angle = step.angle;
     if (step.spread !== undefined && 'spread' in m) m.spread = step.spread;

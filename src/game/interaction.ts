@@ -3,11 +3,14 @@ import {
   pointPolygonDistance,
   pointSegmentDistance,
   rectCorners,
+  triangleCorners,
   type Diffuser,
+  type Filter,
   type Level,
   type Material,
   type Medium,
   type Mirror,
+  type Prism,
   type SegmentCoords,
 } from '../engine';
 import { History } from './history';
@@ -35,8 +38,8 @@ export interface PieceChange {
 
 export type DragMode = 'none' | 'rotate' | 'move' | 'press';
 
-/** A piece the player can handle: a mirror, a transparent block or frosted glass. */
-export type Piece = Mirror | Medium | Diffuser;
+/** A piece the player can handle: mirror, transparent block, frosted glass, prism or filter. */
+export type Piece = Mirror | Medium | Diffuser | Prism | Filter;
 
 export interface InteractionHooks {
   /** Pointer capture radius in logical units (44 CSS px wide zone). */
@@ -51,11 +54,28 @@ export interface InteractionHooks {
 
 /** Gap between a piece and its rotation ring. */
 const RING_GAP = 16;
-const NO_MEDIA: Medium[] = [];
-const NO_DIFFUSERS: Diffuser[] = [];
-
 export const isMedium = (p: Piece): p is Medium => 'material' in p;
 export const isDiffuser = (p: Piece): p is Diffuser => 'spread' in p;
+export const isPrism = (p: Piece): p is Prism => 'size' in p;
+export const isFilter = (p: Piece): p is Filter => 'bands' in p;
+
+/** Kinds in index order: pieces are numbered through these groups in turn. */
+const KIND_ORDER: readonly PieceKind[] = ['mirror', 'medium', 'diffuser', 'prism', 'filter'];
+
+/** The level's list of pieces of a kind (empty when absent). */
+function listOf(level: Level, kind: PieceKind): Piece[] {
+  const list =
+    kind === 'mirror'
+      ? level.mirrors
+      : kind === 'medium'
+        ? level.media
+        : kind === 'diffuser'
+          ? level.diffusers
+          : kind === 'prism'
+            ? level.prisms
+            : level.filters;
+  return (list as Piece[] | undefined) ?? [];
+}
 export const isRotatable = (p: Piece): boolean => p.rotatable !== false;
 export const isMovable = (p: Piece): boolean =>
   p.movable === true || (isMedium(p) && p.trayable === true);
@@ -64,17 +84,26 @@ const isSelectable = (p: Piece): boolean => isOnBoard(p) && (isRotatable(p) || i
 
 /** Radius of the rotation ring around a piece. */
 export function ringRadius(p: Piece): number {
-  return isMedium(p) ? Math.hypot(p.width, p.height) / 2 + RING_GAP - 4 : p.length / 2 + RING_GAP;
+  if (isMedium(p)) return Math.hypot(p.width, p.height) / 2 + RING_GAP - 4;
+  if (isPrism(p)) return p.size / Math.sqrt(3) + RING_GAP - 4;
+  return p.length / 2 + RING_GAP;
 }
 
 /** Distance from the centre where the arm to the handle starts. */
 export function armStart(p: Piece): number {
-  return isMedium(p) ? p.width / 2 : p.length / 2;
+  if (isMedium(p)) return p.width / 2;
+  if (isPrism(p)) return p.size / (2 * Math.sqrt(3));
+  return p.length / 2;
 }
 
-/** True when the piece looks the same after a half turn. */
-export function isHalfTurnSymmetric(p: Piece): boolean {
-  return isMedium(p) || isDiffuser(p) || p.doubleSided !== false;
+/**
+ * Smallest turn (degrees) that leaves the piece looking the same: 120° for an
+ * equilateral prism, 360° for a single-sided mirror, 180° for the others.
+ */
+export function rotationPeriod(p: Piece): number {
+  if (isPrism(p)) return 120;
+  if (!isMedium(p) && !isDiffuser(p) && !isFilter(p) && p.doubleSided === false) return 360;
+  return 180;
 }
 
 /**
@@ -103,42 +132,46 @@ export class Interaction {
   private readonly poly = new Float64Array(8);
   private readonly media: Medium[];
   private readonly diffusers: Diffuser[];
+  /** First index of each kind in the unified numbering. */
+  private readonly offsets: Record<PieceKind, number>;
+  private readonly total: number;
 
   constructor(
     readonly level: Level,
     private readonly hooks: InteractionHooks,
   ) {
-    this.media = (level.media as Medium[] | undefined) ?? NO_MEDIA;
-    this.diffusers = (level.diffusers as Diffuser[] | undefined) ?? NO_DIFFUSERS;
+    this.media = listOf(level, 'medium') as Medium[];
+    this.diffusers = listOf(level, 'diffuser') as Diffuser[];
+    const offsets = {} as Record<PieceKind, number>;
+    let n = 0;
+    for (const kind of KIND_ORDER) {
+      offsets[kind] = n;
+      n += listOf(level, kind).length;
+    }
+    this.offsets = offsets;
+    this.total = n;
   }
 
-  /** Pieces are indexed mirrors, then media, then diffusers. */
+  /** Pieces are indexed mirrors, media, diffusers, prisms, then filters. */
   get pieceCount(): number {
-    return this.level.mirrors.length + this.media.length + this.diffusers.length;
+    return this.total;
   }
 
   piece(index: number): Piece | null {
-    if (index < 0) return null;
-    const m = this.level.mirrors.length;
-    if (index < m) return this.level.mirrors[index] ?? null;
-    if (index < m + this.media.length) return this.media[index - m] ?? null;
-    return this.diffusers[index - m - this.media.length] ?? null;
+    if (index < 0 || index >= this.total) return null;
+    const kind = this.kindOf(index);
+    return listOf(this.level, kind)[index - this.offsets[kind]] ?? null;
   }
 
   kindOf(index: number): PieceKind {
-    const m = this.level.mirrors.length;
-    return index < m ? 'mirror' : index < m + this.media.length ? 'medium' : 'diffuser';
+    let kind: PieceKind = 'mirror';
+    for (const k of KIND_ORDER) if (index >= this.offsets[k]) kind = k;
+    return kind;
   }
 
   /** Index of `index` within its own kind's list. */
   private localIndex(index: number): number {
-    const m = this.level.mirrors.length;
-    const kind = this.kindOf(index);
-    return kind === 'mirror'
-      ? index
-      : kind === 'medium'
-        ? index - m
-        : index - m - this.media.length;
+    return index - this.offsets[this.kindOf(index)];
   }
 
   /** The diffuser the « Dépoli » slider acts on: the selected one, else the first adjustable one. */
@@ -146,7 +179,7 @@ export class Interaction {
     const selected = this.selectedPiece;
     if (selected && isDiffuser(selected) && selected.adjustable === true) return this.selected;
     const i = this.diffusers.findIndex((d) => d.adjustable === true);
-    return i < 0 ? -1 : this.level.mirrors.length + this.media.length + i;
+    return i < 0 ? -1 : this.offsets.diffuser + i;
   }
 
   /**
@@ -225,7 +258,7 @@ export class Interaction {
   /** Puts a block of `material` from the tray on the board, near its preferred spot. */
   placeFromTray(material: Material, time: number): boolean {
     if (this.locked || this.mode !== 'none') return false;
-    const offset = this.level.mirrors.length;
+    const offset = this.offsets.medium;
     const i = this.media.findIndex((m) => m.material === material && m.stored === true);
     const block = this.media[i];
     if (!block) return false;
@@ -426,6 +459,10 @@ export class Interaction {
         y,
         rectCorners(p.x, p.y, p.width, p.height, p.angle, this.poly),
       );
+    }
+    if (isPrism(p)) {
+      const corners = triangleCorners(p.x, p.y, p.size, p.angle, this.poly);
+      return pointPolygonDistance(x, y, corners, 3);
     }
     const s = endpointsOf(p, this.seg);
     return pointSegmentDistance(x, y, s.ax, s.ay, s.bx, s.by);

@@ -1,0 +1,63 @@
+{
+  "id": "p08",
+  "title": "Cyan",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 15,
+      "y": 153.4,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "cyan",
+      "x": 330.3,
+      "y": 159.4
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 110,
+      "y": 140,
+      "angle": 0,
+      "rotatable": false
+    },
+    {
+      "type": "mirror",
+      "id": "mg",
+      "x": 261.6,
+      "y": 195.1,
+      "angle": 45,
+      "length": 12
+    },
+    {
+      "type": "mirror",
+      "id": "mb",
+      "x": 292.6,
+      "y": 238.1,
+      "angle": 75,
+      "length": 12
+    }
+  ],
+  "stars": [9, 15],
+  "solution": [
+    {
+      "piece": "mg",
+      "angle": 0
+    },
+    {
+      "piece": "mb",
+      "angle": 165
+    }
+  ]
+}

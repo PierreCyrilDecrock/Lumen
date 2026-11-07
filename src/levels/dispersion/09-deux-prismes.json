@@ -1,0 +1,67 @@
+{
+  "id": "p09",
+  "title": "Deux prismes",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "s1",
+      "x": 15,
+      "y": 150.7,
+      "angle": -20
+    },
+    {
+      "id": "s2",
+      "x": 74.7,
+      "y": 408.1,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "red",
+      "radius": 7,
+      "x": 270.8,
+      "y": 143.3
+    },
+    {
+      "id": "t2",
+      "color": "violet",
+      "radius": 7,
+      "x": 327.7,
+      "y": 459.7
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "pa",
+      "x": 130,
+      "y": 130,
+      "angle": 60
+    },
+    {
+      "type": "prism",
+      "id": "pb",
+      "x": 210,
+      "y": 380,
+      "angle": 15
+    }
+  ],
+  "stars": [5, 9],
+  "solution": [
+    {
+      "piece": "pa",
+      "angle": 0
+    },
+    {
+      "piece": "pb",
+      "angle": 0
+    }
+  ]
+}

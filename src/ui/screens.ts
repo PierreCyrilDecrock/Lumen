@@ -1,4 +1,4 @@
-import { MATERIALS, type Material } from '../engine';
+import { COLOR_HEX, COLOR_LABELS, MATERIALS, type Material } from '../engine';
 import type { GameView } from '../game-view';
 import { isMedium } from '../game/interaction';
 import { CHAPTER_TITLES, LEVELS, findLevel, levelIndex, nextLevel } from '../levels';
@@ -118,11 +118,43 @@ export class GameUi {
     el.hidden = text === '';
     if (el.textContent !== text) el.textContent = text;
 
+    this.refreshColors();
     const total = this.game.level?.crystals?.length ?? 0;
     $('#play-crystals').hidden = total === 0;
     if (total > 0) {
       setText($('#play-crystals-lit'), String(this.game.trace.crystalsLit));
       setText($('#play-crystals-total'), String(total));
+    }
+  }
+
+  /** Colours captured by each colour target: needed colour, received colour, lit. */
+  private refreshColors(): void {
+    const bar = $('#play-colors');
+    const targets = this.game.level?.colorTargets ?? [];
+    bar.hidden = targets.length === 0;
+    if (targets.length === 0) return;
+    const trace = this.game.trace;
+    let html = '';
+    targets.forEach((t, i) => {
+      const r = trace.colorLight[i * 3] ?? 0;
+      const g = trace.colorLight[i * 3 + 1] ?? 0;
+      const b = trace.colorLight[i * 3 + 2] ?? 0;
+      const max = Math.max(r, g, b);
+      const received =
+        max > 0
+          ? `rgb(${Math.round((r / max) * 255)}, ${Math.round((g / max) * 255)}, ${Math.round((b / max) * 255)})`
+          : 'transparent';
+      const lit = trace.colorTargetsLit[i] === true;
+      const name = COLOR_LABELS[t.color];
+      const state = lit ? 'allumée' : max > 0 ? 'reçoit une autre couleur' : 'éteinte';
+      html += `<span class="color-chip${lit ? ' lit' : ''}" role="listitem" aria-label="Cible ${name} : ${state}">
+        <span class="color-dot" style="background:${COLOR_HEX[t.color]}"></span>${name}
+        <span class="color-arrow" aria-hidden="true">←</span>
+        <span class="color-dot received" style="background:${received}"></span>${lit ? '<span class="color-ok" aria-hidden="true">✓</span>' : ''}</span>`;
+    });
+    if (bar.dataset.html !== html) {
+      bar.dataset.html = html;
+      bar.innerHTML = html;
     }
   }
 

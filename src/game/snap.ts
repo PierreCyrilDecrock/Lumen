@@ -20,10 +20,11 @@ export function snapToGrid(value: number, step = GRID_STEP): number {
 }
 
 /**
- * Angle shown to the player: a double-sided mirror looks the same after a half
- * turn, so it is shown in [0, 180).
+ * Angle shown to the player, within the piece's rotation period: a double-sided
+ * mirror looks the same after a half turn, so it is shown in [0, 180).
+ * `true` / `false` stand for periods of 180° / 360°.
  */
-export function displayAngle(degrees: number, doubleSided: boolean): number {
-  const a = normalizeAngle(Math.round(degrees));
-  return doubleSided ? a % 180 : a;
+export function displayAngle(degrees: number, period: number | boolean): number {
+  const p = period === true ? 180 : period === false ? 360 : period;
+  return normalizeAngle(Math.round(degrees)) % p;
 }

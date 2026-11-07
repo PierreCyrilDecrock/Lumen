@@ -23,3 +23,11 @@ describe('starsFor', () => {
     expect(starsFor(40, [3, 5])).toBe(1);
   });
 });
+
+describe('rotation periods', () => {
+  it('uses 120° for a prism', () => {
+    expect(rotationSteps(0, 120, 120)).toBe(0);
+    expect(rotationSteps(0, 105, 120)).toBe(1);
+    expect(rotationSteps(10, 40, 360)).toBe(2);
+  });
+});

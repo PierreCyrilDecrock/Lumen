@@ -1,0 +1,50 @@
+{
+  "id": "p02",
+  "title": "Rouge et bleu",
+  "mechanic": "dispersion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 54.7,
+      "y": 248.1,
+      "angle": -20
+    }
+  ],
+  "targets": [],
+  "colorTargets": [
+    {
+      "id": "t1",
+      "color": "red",
+      "radius": 7,
+      "x": 300.8,
+      "y": 226.3
+    },
+    {
+      "id": "t2",
+      "color": "blue",
+      "radius": 7,
+      "x": 328.3,
+      "y": 287.8
+    }
+  ],
+  "pieces": [
+    {
+      "type": "prism",
+      "id": "prism",
+      "x": 190,
+      "y": 220,
+      "angle": 90
+    }
+  ],
+  "stars": [2, 4],
+  "solution": [
+    {
+      "piece": "prism",
+      "angle": 0
+    }
+  ]
+}

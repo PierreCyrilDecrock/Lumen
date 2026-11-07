@@ -1,14 +1,26 @@
-import { pointInPolygon, rayCircleDistance, raySegmentDistance, rectCorners } from './geometry';
+import {
+  pointInPolygon,
+  rayCircleDistance,
+  raySegmentDistance,
+  rectCorners,
+  triangleCorners,
+} from './geometry';
 import {
   AIR_INDEX,
+  COLORS,
   DEFAULT_FAN_RAYS,
   MATERIALS,
+  SPECTRUM,
+  WHITE,
+  type ColorTarget,
   type Crystal,
   type Diffuser,
+  type Filter,
   type Fog,
   type Level,
   type Medium,
   type Mirror,
+  type Prism,
   type Wall,
 } from './pieces';
 import { DEG_TO_RAD } from './vec';
@@ -56,6 +68,8 @@ export interface BeamSegment {
   medium: number;
   /** True for the rays of a diffusion fan. */
   diffused: boolean;
+  /** Spectral band (index in SPECTRUM), -1 for white light. */
+  band: number;
 }
 
 export type ImpactKind =
@@ -66,7 +80,10 @@ export type ImpactKind =
   | 'interface'
   | 'totalReflection'
   | 'diffuser'
-  | 'crystal';
+  | 'crystal'
+  | 'filter'
+  | 'colorTarget'
+  | 'prism';
 
 /** Point where a ray meets a piece. `nx, ny` is the unit normal facing the incoming ray. */
 export interface Impact {
@@ -92,9 +109,11 @@ const KIND_WALL = 1;
 const KIND_MEDIUM = 2;
 const KIND_DIFFUSER = 3;
 const KIND_FOG = 4;
+const KIND_PRISM = 5;
+const KIND_FILTER = 6;
 const EDGE_FIELDS = 6;
-/** Pending ray: ox, oy, dx, dy, intensity, medium, bounce, generation, skip, dist, fog, budget. */
-const RAY_FIELDS = 12;
+/** Pending ray: ox, oy, dx, dy, intensity, medium, bounce, generation, skip, dist, fog, budget, band. */
+const RAY_FIELDS = 13;
 /** Cone of a fan, for rendering: x, y, axis angle (rad), spread (rad), intensity. */
 const CONE_FIELDS = 5;
 
@@ -112,6 +131,10 @@ export class TraceResult {
   readonly crystalLight: number[] = [];
   /** Progress of each crystal, 0 to 1 (1 = lit). */
   readonly crystalProgress: number[] = [];
+  /** Light received by each colour target: r, g, b per target. */
+  readonly colorLight: number[] = [];
+  /** `colorTargetsLit[i]`: colour target i receives the right colour. */
+  readonly colorTargetsLit: boolean[] = [];
   /** True when at least one ray was cut by a limit (bounces, segments, rays). */
   truncated = false;
   /** Rays traced (emitted, partial reflections, fan rays). */
@@ -143,15 +166,22 @@ export class TraceResult {
     return n;
   }
 
-  /** Every target and every crystal is lit (and there is at least one of them). */
+  /** Every target, crystal and colour target is lit (and there is at least one goal). */
   get solved(): boolean {
-    const goals = this.targetsHit.length + this.crystalProgress.length;
+    const goals =
+      this.targetsHit.length + this.crystalProgress.length + this.colorTargetsLit.length;
     if (goals === 0) return false;
     for (let i = 0; i < this.targetsHit.length; i++) if (!this.targetsHit[i]) return false;
+    for (let i = 0; i < this.colorTargetsLit.length; i++)
+      if (!this.colorTargetsLit[i]) return false;
     return this.crystalsLit === this.crystalProgress.length;
   }
 
-  reset(targetCount: number, crystalCount: number): void {
+  reset(targetCount: number, crystalCount: number, colorCount = 0): void {
+    this.colorLight.length = colorCount * 3;
+    this.colorLight.fill(0);
+    this.colorTargetsLit.length = colorCount;
+    this.colorTargetsLit.fill(false);
     this.segments.length = 0;
     this.impacts.length = 0;
     this.targetsHit.length = targetCount;
@@ -175,6 +205,7 @@ export class TraceResult {
     intensity: number,
     medium: number,
     diffused = false,
+    band: number = WHITE,
   ): void {
     const i = this.segments.length;
     let s = this.segmentPool[i];
@@ -192,6 +223,7 @@ export class TraceResult {
         intensity: 1,
         medium: -1,
         diffused: false,
+        band: WHITE,
       };
       this.segmentPool.push(s);
     }
@@ -201,12 +233,14 @@ export class TraceResult {
     s.y2 = y2;
     s.bounce = bounce;
     s.emitter = emitter;
-    s.r = 1;
-    s.g = 1;
-    s.b = 1;
+    const rgb = band >= 0 ? SPECTRUM[band]!.rgb : WHITE_RGB;
+    s.r = rgb[0];
+    s.g = rgb[1];
+    s.b = rgb[2];
     s.intensity = intensity;
     s.medium = medium;
     s.diffused = diffused;
+    s.band = band;
     this.segments.push(s);
   }
 
@@ -273,7 +307,11 @@ export class TraceResult {
 
 export { CONE_FIELDS };
 
+const WHITE_RGB = [1, 1, 1] as const;
 const NO_MEDIA: readonly Medium[] = [];
+const NO_PRISMS: readonly Prism[] = [];
+const NO_FILTERS: readonly Filter[] = [];
+const NO_COLOR_TARGETS: readonly ColorTarget[] = [];
 const NO_DIFFUSERS: readonly Diffuser[] = [];
 const NO_CRYSTALS: readonly Crystal[] = [];
 const NO_FOGS: readonly Fog[] = [];
@@ -290,12 +328,26 @@ function buildGeometry(level: Level, out: TraceResult): number {
   const media = level.media ?? NO_MEDIA;
   const fogs = level.fogs ?? NO_FOGS;
   const diffusers = level.diffusers ?? NO_DIFFUSERS;
-  let count = level.mirrors.length + level.walls.length + diffusers.length + fogs.length * 4;
+  const prisms = level.prisms ?? NO_PRISMS;
+  const filters = level.filters ?? NO_FILTERS;
+  let count =
+    level.mirrors.length +
+    level.walls.length +
+    diffusers.length +
+    filters.length +
+    fogs.length * 4 +
+    prisms.length * 3;
   for (const m of media) if (m.stored !== true) count += 4;
   ensureEdges(out, count);
   let e = writeLinear(level.mirrors, KIND_MIRROR, out, 0);
   e = writeLinear(level.walls, KIND_WALL, out, e);
   e = writeLinear(diffusers, KIND_DIFFUSER, out, e);
+  e = writeLinear(filters, KIND_FILTER, out, e);
+  for (let i = 0; i < prisms.length; i++) {
+    const p = prisms[i]!;
+    const corners = triangleCorners(p.x, p.y, p.size, p.angle, out.corners);
+    e = writePolygon(out, e, KIND_PRISM, i, corners, 3, p.x, p.y);
+  }
   for (let i = 0; i < media.length; i++) {
     const m = media[i]!;
     if (m.stored === true) continue;
@@ -319,11 +371,25 @@ function writeRect(
   h: number,
   angle: number,
 ): number {
+  const corners = rectCorners(cx, cy, w, h, angle, out.corners);
+  return writePolygon(out, start, kind, piece, corners, 4, cx, cy);
+}
+
+/** Writes the sides of a convex polygon, with outward normals. */
+function writePolygon(
+  out: TraceResult,
+  start: number,
+  kind: number,
+  piece: number,
+  c: Float64Array,
+  count: number,
+  cx: number,
+  cy: number,
+): number {
   const g = out.geometry;
-  const c = rectCorners(cx, cy, w, h, angle, out.corners);
   let e = start;
-  for (let k = 0; k < 4; k++) {
-    const j = (k + 1) % 4;
+  for (let k = 0; k < count; k++) {
+    const j = (k + 1) % count;
     const ax = c[k * 2]!;
     const ay = c[k * 2 + 1]!;
     const bx = c[j * 2]!;
@@ -350,7 +416,7 @@ function writeRect(
 }
 
 function writeLinear(
-  list: readonly (Mirror | Wall | Diffuser)[],
+  list: readonly (Mirror | Wall | Diffuser | Filter)[],
   kind: number,
   out: TraceResult,
   start: number,
@@ -381,7 +447,7 @@ function exitDistance(level: Level, ox: number, oy: number, dx: number, dy: numb
   return Math.max(Math.min(tx, ty), 0);
 }
 
-/** Index of the medium containing a point, or -1 for air. */
+/** Index of the medium (media, then prisms) containing a point, or -1 for air. */
 function mediumAt(level: Level, x: number, y: number, corners: Float64Array): number {
   const media = level.media ?? NO_MEDIA;
   for (let i = 0; i < media.length; i++) {
@@ -389,7 +455,46 @@ function mediumAt(level: Level, x: number, y: number, corners: Float64Array): nu
     if (m.stored === true) continue;
     if (pointInPolygon(x, y, rectCorners(m.x, m.y, m.width, m.height, m.angle, corners))) return i;
   }
+  const prisms = level.prisms ?? NO_PRISMS;
+  for (let i = 0; i < prisms.length; i++) {
+    const p = prisms[i]!;
+    if (pointInPolygon(x, y, triangleCorners(p.x, p.y, p.size, p.angle, corners), 3)) {
+      return media.length + i;
+    }
+  }
   return -1;
+}
+
+/**
+ * Refractive index of medium `m` (media, then prisms; -1 = air) for `band`.
+ * Prisms disperse: each band has its own index (white uses the middle one).
+ */
+function indexOf(level: Level, m: number, band: number): number {
+  if (m < 0) return AIR_INDEX;
+  const media = level.media ?? NO_MEDIA;
+  if (m < media.length) return MATERIALS[media[m]!.material].n;
+  return SPECTRUM[band >= 0 ? band : 2]!.n;
+}
+
+/**
+ * True when light of summed colour (r, g, b) matches `target`: bright enough,
+ * and equal component by component once both are normalised.
+ */
+export function colorMatches(
+  r: number,
+  g: number,
+  b: number,
+  target: readonly [number, number, number],
+  tolerance: number,
+): boolean {
+  const max = Math.max(r, g, b);
+  if (max < TARGET_THRESHOLD) return false;
+  const tmax = Math.max(target[0], target[1], target[2]);
+  return (
+    Math.abs(r / max - target[0] / tmax) <= tolerance &&
+    Math.abs(g / max - target[1] / tmax) <= tolerance &&
+    Math.abs(b / max - target[2] / tmax) <= tolerance
+  );
 }
 
 /** Absorption density of the fog containing a point, or 0. */
@@ -417,6 +522,7 @@ function pushRay(
   dist: number,
   fog: number,
   budget: number,
+  band: number = WHITE,
 ): number {
   if (out.rayCount >= MAX_RAYS) {
     out.truncated = true;
@@ -442,6 +548,7 @@ function pushRay(
   r[o + 9] = dist;
   r[o + 10] = fog;
   r[o + 11] = budget;
+  r[o + 12] = band;
   return top + 1;
 }
 
@@ -475,8 +582,10 @@ export function traceRays(
   const diffusers = level.diffusers ?? NO_DIFFUSERS;
   const crystals = level.crystals ?? NO_CRYSTALS;
   const fogs = level.fogs ?? NO_FOGS;
+  const filters = level.filters ?? NO_FILTERS;
+  const colorTargets = level.colorTargets ?? NO_COLOR_TARGETS;
 
-  out.reset(targets.length, crystals.length);
+  out.reset(targets.length, crystals.length, colorTargets.length);
   const edgeCount = buildGeometry(level, out);
   const g = out.geometry;
 
@@ -516,6 +625,7 @@ export function traceRays(
       let dist = r[o + 9]!;
       let fog = r[o + 10]!;
       let budget = r[o + 11]!;
+      const band = r[o + 12]!;
       const diffused = dist >= 0;
       // Crystal just crossed, ignored on the way out.
       let skipCrystal = -1;
@@ -556,12 +666,22 @@ export function traceRays(
             hitTarget = -1;
           }
         }
-        if (hitCrystal >= 0) hitEdge = -1;
-        else if (hitTarget >= 0) hitEdge = -1;
+        let hitColor = -1;
+        for (let i = 0; i < colorTargets.length; i++) {
+          const ct = colorTargets[i]!;
+          const t = rayCircleDistance(ox, oy, dx, dy, ct.x, ct.y, ct.radius);
+          if (t < best) {
+            best = t;
+            hitColor = i;
+            hitCrystal = -1;
+            hitTarget = -1;
+          }
+        }
+        if (hitColor >= 0 || hitCrystal >= 0 || hitTarget >= 0) hitEdge = -1;
 
         const hx = ox + dx * best;
         const hy = oy + dy * best;
-        out.addSegment(ox, oy, hx, hy, bounce, e, intensity, medium, diffused);
+        out.addSegment(ox, oy, hx, hy, bounce, e, intensity, medium, diffused, band);
         // Travelled distance: fog absorption and diffused falloff.
         if (fog > 0) intensity *= Math.exp(-fog * best);
         if (dist >= 0) dist += best;
@@ -595,6 +715,19 @@ export function traceRays(
           continue;
         }
         skipCrystal = -1;
+
+        if (hitColor >= 0) {
+          const ct = colorTargets[hitColor]!;
+          const light = receivedLight(intensity, dist);
+          const rgb = band >= 0 ? SPECTRUM[band]!.rgb : WHITE_RGB;
+          out.colorLight[hitColor * 3]! += rgb[0] * light;
+          out.colorLight[hitColor * 3 + 1]! += rgb[1] * light;
+          out.colorLight[hitColor * 3 + 2]! += rgb[2] * light;
+          const cnx = (hx - ct.x) / ct.radius;
+          const cny = (hy - ct.y) / ct.radius;
+          out.addImpact(hx, hy, 'colorTarget', hitColor, cnx, cny, bounce, intensity);
+          break;
+        }
 
         if (hitTarget >= 0) {
           const tg = targets[hitTarget]!;
@@ -654,7 +787,44 @@ export function traceRays(
             bounce,
             hitEdge,
             fog,
+            band,
           );
+          break;
+        }
+        if (kind === KIND_FILTER) {
+          const filter = filters[piece]!;
+          const n = segmentNormalFacing(g, k, dx, dy);
+          if (band >= 0) {
+            if (filter.bands.includes(band)) {
+              ox = hx;
+              oy = hy;
+              skip = hitEdge;
+              continue;
+            }
+            out.addImpact(hx, hy, 'filter', piece, n.x, n.y, bounce, intensity);
+            break;
+          }
+          // White light keeps only the filter's bands, along the same line.
+          out.addImpact(hx, hy, 'filter', piece, n.x, n.y, bounce, intensity);
+          for (const b of filter.bands) {
+            top = pushRay(
+              out,
+              top,
+              hx,
+              hy,
+              dx,
+              dy,
+              intensity,
+              medium,
+              bounce,
+              1,
+              hitEdge,
+              dist,
+              fog,
+              budget,
+              b,
+            );
+          }
           break;
         }
         if (budget <= 0) {
@@ -674,21 +844,83 @@ export function traceRays(
           dx -= dn * n.x;
           dy -= dn * n.y;
         } else {
-          // Interface of a medium. Outward normal stored with the edge.
+          // Interface of a medium or a prism. Outward normal stored with the edge.
           const onx = g[k + 4]!;
           const ony = g[k + 5]!;
           const entering = dx * onx + dy * ony < 0;
-          const mat = media[piece]!.material;
-          const n1 = entering
-            ? medium >= 0
-              ? MATERIALS[media[medium]!.material].n
-              : AIR_INDEX
-            : MATERIALS[mat].n;
-          const n2 = entering ? MATERIALS[mat].n : AIR_INDEX;
+          const self = kind === KIND_PRISM ? media.length + piece : piece;
           // Normal facing the incoming ray.
           const nx = entering ? onx : -onx;
           const ny = entering ? ony : -ony;
           const cosi = Math.min(1, -(dx * nx + dy * ny));
+          if (kind === KIND_PRISM && entering && band < 0) {
+            // Dispersion: white light splits into the six bands, each refracted
+            // with its own index; a faint white partial reflection remains.
+            const incidence = Math.acos(cosi) * RAD_TO_DEG;
+            out.addImpact(
+              hx,
+              hy,
+              'prism',
+              piece,
+              nx,
+              ny,
+              bounce,
+              intensity,
+              incidence,
+              Number.NaN,
+              true,
+            );
+            if (generation === 0) {
+              const rx = dx + 2 * cosi * nx;
+              const ry = dy + 2 * cosi * ny;
+              top = pushRay(
+                out,
+                top,
+                hx,
+                hy,
+                rx,
+                ry,
+                intensity * PARTIAL_REFLECTION,
+                medium,
+                bounce + 1,
+                1,
+                hitEdge,
+                dist,
+                fog,
+                budget - 1,
+              );
+            }
+            const n1 = indexOf(level, medium, WHITE);
+            for (let b = SPECTRUM.length - 1; b >= 0; b--) {
+              const eta = n1 / SPECTRUM[b]!.n;
+              const kb = 1 - eta * eta * (1 - cosi * cosi);
+              if (kb < 0) continue;
+              const cb = Math.sqrt(kb);
+              const tx = eta * dx + (eta * cosi - cb) * nx;
+              const ty = eta * dy + (eta * cosi - cb) * ny;
+              const tl = Math.hypot(tx, ty);
+              top = pushRay(
+                out,
+                top,
+                hx,
+                hy,
+                tx / tl,
+                ty / tl,
+                intensity,
+                self,
+                bounce + 1,
+                1,
+                hitEdge,
+                dist,
+                fog,
+                budget - 1,
+                b,
+              );
+            }
+            break;
+          }
+          const n1 = entering ? indexOf(level, medium, band) : indexOf(level, self, band);
+          const n2 = entering ? indexOf(level, self, band) : AIR_INDEX;
           const eta = n1 / n2;
           const k2 = 1 - eta * eta * (1 - cosi * cosi);
           const incidence = Math.acos(cosi) * RAD_TO_DEG;
@@ -696,7 +928,17 @@ export function traceRays(
           const rx = dx + 2 * cosi * nx;
           const ry = dy + 2 * cosi * ny;
           if (k2 < 0) {
-            out.addImpact(hx, hy, 'totalReflection', piece, nx, ny, bounce, intensity, incidence);
+            out.addImpact(
+              hx,
+              hy,
+              kind === KIND_PRISM ? 'prism' : 'totalReflection',
+              piece,
+              nx,
+              ny,
+              bounce,
+              intensity,
+              incidence,
+            );
             dx = rx;
             dy = ry;
           } else {
@@ -705,7 +947,7 @@ export function traceRays(
             out.addImpact(
               hx,
               hy,
-              'interface',
+              kind === KIND_PRISM ? 'prism' : 'interface',
               piece,
               nx,
               ny,
@@ -731,11 +973,12 @@ export function traceRays(
                 dist,
                 fog,
                 budget - 1,
+                band,
               );
             }
             dx = eta * dx + (eta * cosi - cost) * nx;
             dy = eta * dy + (eta * cosi - cost) * ny;
-            medium = entering ? piece : -1;
+            medium = entering ? self : -1;
           }
         }
         const dl = Math.hypot(dx, dy);
@@ -748,6 +991,17 @@ export function traceRays(
         budget--;
       }
     }
+  }
+  for (let i = 0; i < colorTargets.length; i++) {
+    const ct = colorTargets[i]!;
+    const l = out.colorLight;
+    out.colorTargetsLit[i] = colorMatches(
+      l[i * 3]!,
+      l[i * 3 + 1]!,
+      l[i * 3 + 2]!,
+      COLORS[ct.color],
+      ct.tolerance,
+    );
   }
   return out;
 }
@@ -769,6 +1023,7 @@ function spawnFan(
   bounce: number,
   edge: number,
   fog: number,
+  band: number,
 ): number {
   const count = Math.max(1, Math.round(diffuser.rays ?? DEFAULT_FAN_RAYS));
   const spread = diffuser.spread * DEG_TO_RAD;
@@ -795,6 +1050,7 @@ function spawnFan(
       0,
       fog,
       FAN_BOUNCES,
+      band,
     );
   }
   return top;
