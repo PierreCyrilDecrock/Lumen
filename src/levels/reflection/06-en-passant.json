@@ -1,0 +1,74 @@
+{
+  "id": "r06",
+  "title": "En passant",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 60,
+      "y": 500,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 330,
+      "y": 300,
+      "passThrough": true
+    },
+    {
+      "id": "t2",
+      "x": 200,
+      "y": 100,
+      "passThrough": true
+    },
+    {
+      "id": "t3",
+      "x": 40,
+      "y": 330
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 330,
+      "y": 500,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 330,
+      "y": 100,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 40,
+      "y": 100,
+      "angle": 45
+    }
+  ],
+  "stars": [12, 18],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 135
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    },
+    {
+      "piece": "m3",
+      "angle": 135
+    }
+  ]
+}

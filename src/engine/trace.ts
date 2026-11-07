@@ -214,6 +214,26 @@ export function traceRays(
       if (hitTarget >= 0) {
         const tg = targets[hitTarget]!;
         out.targetsHit[hitTarget] = true;
+        if (tg.passThrough === true) {
+          out.addImpact(
+            hx,
+            hy,
+            'target',
+            hitTarget,
+            (hx - tg.x) / tg.radius,
+            (hy - tg.y) / tg.radius,
+            bounce,
+          );
+          // Resume on the far side of the disc, same direction.
+          const mx = hx - tg.x;
+          const my = hy - tg.y;
+          const chord = -2 * (mx * dx + my * dy);
+          ox = hx + dx * chord;
+          oy = hy + dy * chord;
+          skip = -1;
+          bounce--; // Crossing a target is not a reflection.
+          continue;
+        }
         out.addImpact(
           hx,
           hy,

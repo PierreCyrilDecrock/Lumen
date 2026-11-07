@@ -167,6 +167,21 @@ describe('traceRays: reflection', () => {
     expect(Math.hypot(n.nx, n.ny)).toBeCloseTo(1);
   });
 
+  it('lights a pass-through target and carries on to the next one', () => {
+    const r = traceRays(
+      level({
+        emitters: [emitter(20, 280, 0)],
+        targets: [{ ...target(150, 280), passThrough: true }, target(300, 280)],
+      }),
+    );
+    expect(r.targetsHit).toEqual([true, true]);
+    expect(r.segments).toHaveLength(2);
+    expect(r.segments[0]!.x2).toBeCloseTo(138);
+    expect(r.segments[1]!.x1).toBeCloseTo(162);
+    expect(r.segments[1]!.x2).toBeCloseTo(288);
+    expect(r.segments[1]!.bounce).toBe(0);
+  });
+
   it('tags segments with their emitter', () => {
     const r = traceRays(level({ emitters: [emitter(10, 100, 0), emitter(10, 400, 0)] }));
     expect(r.segments.map((s) => s.emitter)).toEqual([0, 1]);

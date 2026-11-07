@@ -3,7 +3,7 @@ import type { Settings } from '../game/settings';
 import type { GameCanvas } from './canvas';
 import { HaloLayer } from './halo';
 import { drawEmitter, drawMirror, drawTarget, drawWall } from './pieces';
-import { drawAngleLabel, drawRotationRing, type SelectionView } from './selection';
+import { drawAngleLabel, drawHint, drawRotationRing, type SelectionView } from './selection';
 import { makeGlowSprite, makeImpactSprite } from './sprites';
 import { AMBER, BACKGROUND, BEAM_CORE_COLOR, BEAM_CORE_WIDTH } from './theme';
 
@@ -63,6 +63,8 @@ export class SceneRenderer {
       const isSelected = sel !== null && sel.selected === i;
       drawMirror(ctx, level.mirrors[i]!, isSelected ? sel.bounce : 1, isSelected);
     }
+    const hinted = selection && selection.hint >= 0 ? level.mirrors[selection.hint] : undefined;
+    if (selection && hinted) drawHint(ctx, hinted, selection.hintAlpha);
     const selectedMirror = sel ? level.mirrors[sel.selected] : undefined;
     if (sel && selectedMirror && sel.rotatable) drawRotationRing(ctx, selectedMirror, sel);
     for (let i = 0; i < level.targets.length; i++) {

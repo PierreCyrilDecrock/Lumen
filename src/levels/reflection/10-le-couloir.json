@@ -1,0 +1,108 @@
+{
+  "id": "r10",
+  "title": "Le couloir",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 520,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 60,
+      "y": 80
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 180,
+      "y": 520,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 180,
+      "y": 380,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 340,
+      "y": 380,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m4",
+      "x": 340,
+      "y": 240,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m5",
+      "x": 60,
+      "y": 240,
+      "angle": 90
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 260,
+      "y": 450,
+      "angle": 0,
+      "length": 120
+    },
+    {
+      "type": "wall",
+      "id": "w2",
+      "x": 200,
+      "y": 310,
+      "angle": 0,
+      "length": 240
+    },
+    {
+      "type": "wall",
+      "id": "w3",
+      "x": 250,
+      "y": 160,
+      "angle": 0,
+      "length": 180
+    }
+  ],
+  "stars": [15, 22],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 135
+    },
+    {
+      "piece": "m2",
+      "angle": 135
+    },
+    {
+      "piece": "m3",
+      "angle": 135
+    },
+    {
+      "piece": "m4",
+      "angle": 45
+    },
+    {
+      "piece": "m5",
+      "angle": 45
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "id": "r11",
+  "title": "Leurres",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 280,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 260,
+      "y": 500
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 150,
+      "y": 280,
+      "angle": 45
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 260,
+      "y": 280,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 260,
+      "y": 380,
+      "angle": 0
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 150,
+      "y": 420,
+      "angle": 0,
+      "length": 120
+    },
+    {
+      "type": "wall",
+      "id": "w2",
+      "x": 340,
+      "y": 200,
+      "angle": 90,
+      "length": 160
+    }
+  ],
+  "stars": [12, 18],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 0
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    },
+    {
+      "piece": "m3",
+      "angle": 90
+    }
+  ]
+}

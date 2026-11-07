@@ -1,0 +1,79 @@
+{
+  "id": "r03",
+  "title": "Le Zigzag",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 54,
+      "y": 170,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 320,
+      "y": 230
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 200,
+      "y": 170,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 200,
+      "y": 350,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 320,
+      "y": 350,
+      "angle": 90,
+      "doubleSided": false
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 290,
+      "y": 260,
+      "angle": 0,
+      "length": 50
+    },
+    {
+      "type": "wall",
+      "id": "w2",
+      "x": 110,
+      "y": 440,
+      "angle": 90,
+      "length": 70
+    }
+  ],
+  "stars": [9, 14],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    },
+    {
+      "piece": "m3",
+      "angle": 135
+    }
+  ]
+}

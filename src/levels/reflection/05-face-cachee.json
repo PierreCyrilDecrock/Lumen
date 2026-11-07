@@ -1,0 +1,61 @@
+{
+  "id": "r05",
+  "title": "Face cachée",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 195,
+      "y": 520,
+      "angle": 270
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 60,
+      "y": 120
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 195,
+      "y": 300,
+      "angle": 0,
+      "doubleSided": false
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 60,
+      "y": 300,
+      "angle": 270,
+      "doubleSided": false
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 300,
+      "y": 200,
+      "angle": 0,
+      "length": 120
+    }
+  ],
+  "stars": [6, 9],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 225
+    }
+  ]
+}

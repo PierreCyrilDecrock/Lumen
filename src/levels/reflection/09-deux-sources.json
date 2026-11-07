@@ -1,0 +1,73 @@
+{
+  "id": "r09",
+  "title": "Deux sources",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "s1",
+      "x": 40,
+      "y": 120,
+      "angle": 0
+    },
+    {
+      "id": "s2",
+      "x": 350,
+      "y": 520,
+      "angle": 270
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 250,
+      "y": 470
+    },
+    {
+      "id": "t2",
+      "x": 130,
+      "y": 450
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 250,
+      "y": 120,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 350,
+      "y": 260,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 130,
+      "y": 260,
+      "angle": 90
+    }
+  ],
+  "stars": [9, 14],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    },
+    {
+      "piece": "m3",
+      "angle": 135
+    }
+  ]
+}

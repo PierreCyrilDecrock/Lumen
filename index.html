@@ -16,44 +16,120 @@
     />
   </head>
   <body class="app">
-    <header class="app-header">
-      <span class="app-brand">Lumen</span>
-      <h1>Le Zigzag</h1>
-      <div class="app-actions">
-        <button
-          id="undo"
-          class="icon-button"
-          type="button"
-          aria-label="Annuler"
-          title="Annuler (Ctrl+Z)"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 14 4 9l5-5" />
-            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-          </svg>
-        </button>
-        <button
-          id="redo"
-          class="icon-button"
-          type="button"
-          aria-label="Rétablir"
-          title="Rétablir (Ctrl+Maj+Z)"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m15 14 5-5-5-5" />
-            <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-          </svg>
-        </button>
+    <section id="screen-menu" class="screen screen-menu" hidden>
+      <div class="menu">
+        <h1 class="menu-title" tabindex="-1">Lumen</h1>
+        <p class="menu-tagline">Guidez la lumière jusqu'à sa cible.</p>
+        <div class="menu-actions">
+          <button id="menu-play" class="button button-primary" type="button">Jouer</button>
+          <button id="menu-levels" class="button" type="button">Niveaux</button>
+        </div>
       </div>
-    </header>
-    <main class="app-stage">
-      <canvas
-        id="game"
-        class="game-canvas"
-        role="img"
-        aria-label="Plateau : tournez et déplacez les miroirs pour guider la lumière jusqu'à la cible"
-      ></canvas>
-    </main>
+    </section>
+
+    <section id="screen-levels" class="screen" hidden>
+      <header class="app-header">
+        <button
+          class="icon-button"
+          type="button"
+          data-back
+          data-icon="back"
+          aria-label="Retour au menu"
+        ></button>
+        <h1 tabindex="-1">Niveaux</h1>
+        <span></span>
+      </header>
+      <div id="level-chapters" class="level-chapters"></div>
+    </section>
+
+    <section id="screen-play" class="screen" hidden>
+      <header class="app-header">
+        <button
+          class="icon-button"
+          type="button"
+          data-back
+          data-icon="back"
+          aria-label="Retour aux niveaux"
+        ></button>
+        <h1 id="play-title" tabindex="-1"></h1>
+        <div class="app-actions">
+          <button
+            id="play-pause"
+            class="icon-button"
+            type="button"
+            data-icon="pause"
+            aria-label="Pause"
+            title="Pause (Échap)"
+          ></button>
+        </div>
+      </header>
+      <div class="hud-bar">
+        <div class="hud-stats">
+          <span class="hud-counter"><strong id="play-rotations">0</strong> rotations</span>
+          <span id="play-stars" class="hud-stars" role="img"></span>
+        </div>
+        <div class="app-actions">
+          <button
+            id="play-hint"
+            class="icon-button"
+            type="button"
+            data-icon="hint"
+            aria-label="Indice"
+            title="Indice (H)"
+          ></button>
+          <button
+            id="undo"
+            class="icon-button"
+            type="button"
+            data-icon="undo"
+            aria-label="Annuler"
+            title="Annuler (Ctrl+Z)"
+          ></button>
+          <button
+            id="redo"
+            class="icon-button"
+            type="button"
+            data-icon="redo"
+            aria-label="Rétablir"
+            title="Rétablir (Ctrl+Maj+Z)"
+          ></button>
+        </div>
+      </div>
+      <main class="app-stage">
+        <canvas
+          id="game"
+          class="game-canvas"
+          role="img"
+          aria-label="Plateau : tournez et déplacez les miroirs pour guider la lumière jusqu'aux cibles"
+        ></canvas>
+      </main>
+      <p id="play-message" class="sr-only" aria-live="polite"></p>
+
+      <div id="pause" class="overlay" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+          <h2 id="pause-title">Pause</h2>
+          <div class="dialog-actions">
+            <button id="pause-resume" class="button button-primary" type="button">Reprendre</button>
+            <button id="pause-restart" class="button" type="button">Recommencer</button>
+            <button id="pause-levels" class="button" type="button">Niveaux</button>
+            <button id="pause-menu" class="button" type="button">Menu principal</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="victory" class="overlay" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+          <h2 id="victory-title">Lumière !</h2>
+          <div id="victory-stars" class="victory-stars" role="img"></div>
+          <p id="victory-detail" class="dialog-detail"></p>
+          <div class="dialog-actions">
+            <button id="victory-next" class="button button-primary" type="button">Suivant</button>
+            <button id="victory-replay" class="button" type="button">Rejouer</button>
+            <button id="victory-levels" class="button" type="button">Niveaux</button>
+          </div>
+        </div>
+      </div>
+    </section>
     <noscript>Lumen a besoin de JavaScript pour fonctionner.</noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>

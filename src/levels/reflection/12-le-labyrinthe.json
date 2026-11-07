@@ -1,0 +1,106 @@
+{
+  "id": "r12",
+  "title": "Le labyrinthe",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 60,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 340,
+      "y": 200,
+      "passThrough": true
+    },
+    {
+      "id": "t2",
+      "x": 330,
+      "y": 500
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 340,
+      "y": 60,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 340,
+      "y": 360,
+      "angle": 45
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 170,
+      "y": 250,
+      "angle": 135,
+      "movable": true
+    },
+    {
+      "type": "mirror",
+      "id": "m4",
+      "x": 120,
+      "y": 500,
+      "angle": 270,
+      "doubleSided": false
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 230,
+      "y": 200,
+      "angle": 90,
+      "length": 200
+    },
+    {
+      "type": "wall",
+      "id": "w2",
+      "x": 200,
+      "y": 440,
+      "angle": 0,
+      "length": 100
+    },
+    {
+      "type": "wall",
+      "id": "w3",
+      "x": 60,
+      "y": 300,
+      "angle": 90,
+      "length": 160
+    }
+  ],
+  "stars": [12, 18],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 135
+    },
+    {
+      "piece": "m3",
+      "x": 120,
+      "y": 360
+    },
+    {
+      "piece": "m4",
+      "angle": 225
+    }
+  ]
+}

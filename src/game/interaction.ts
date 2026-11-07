@@ -33,6 +33,8 @@ export interface InteractionHooks {
   onAngleStep?(pointerType: string): void;
   /** Called when the selection, the history or a piece changes. */
   onChange?(): void;
+  /** Called for each player move (not for undo / redo). */
+  onCommit?(change: MirrorChange): void;
 }
 
 /** Gap between a mirror's end and its rotation ring. */
@@ -59,6 +61,8 @@ export class Interaction {
   /** Time (s) of the last drop or keyboard rotation, for the bounce effect. */
   dropTime = -Infinity;
   readonly history = new History<MirrorChange>();
+  /** While true (pause, victory), the player can no longer change anything. */
+  locked = false;
 
   private readonly start: Pose = { x: 0, y: 0, angle: 0 };
   private grabDx = 0;
@@ -76,6 +80,7 @@ export class Interaction {
   }
 
   handlePointer(e: LogicalPointerEvent, time: number): void {
+    if (this.locked && this.mode === 'none') return;
     switch (e.phase) {
       case 'down':
         this.onDown(e.x, e.y);
@@ -97,12 +102,14 @@ export class Interaction {
   /** Rotates the selection by `delta` degrees (keyboard). */
   rotateSelected(delta: number, time: number): boolean {
     const m = this.selectedMirror;
-    if (!m || !isRotatable(m) || this.mode !== 'none') return false;
+    if (!m || !isRotatable(m) || this.mode !== 'none' || this.locked) return false;
     const angle = snapAngle(m.angle + delta);
     if (!canPlaceMirror(this.level, this.selected, m.x, m.y, angle)) return false;
     const from = pose(m);
     m.angle = angle;
-    this.history.push({ index: this.selected, from, to: pose(m) });
+    const change = { index: this.selected, from, to: pose(m) };
+    this.history.push(change);
+    this.hooks.onCommit?.(change);
     this.dirty = true;
     this.dropTime = time;
     this.hooks.onChange?.();
@@ -110,7 +117,7 @@ export class Interaction {
   }
 
   undo(): boolean {
-    if (this.mode !== 'none') return false;
+    if (this.mode !== 'none' || this.locked) return false;
     const entry = this.history.undo();
     if (!entry) return false;
     this.apply(entry.index, entry.from);
@@ -118,7 +125,7 @@ export class Interaction {
   }
 
   redo(): boolean {
-    if (this.mode !== 'none') return false;
+    if (this.mode !== 'none' || this.locked) return false;
     const entry = this.history.redo();
     if (!entry) return false;
     this.apply(entry.index, entry.to);
@@ -213,7 +220,9 @@ export class Interaction {
     if (!m || (mode !== 'rotate' && mode !== 'move')) return;
     const s = this.start;
     if (m.x === s.x && m.y === s.y && m.angle === s.angle) return;
-    this.history.push({ index: this.selected, from: { ...s }, to: pose(m) });
+    const change = { index: this.selected, from: { ...s }, to: pose(m) };
+    this.history.push(change);
+    this.hooks.onCommit?.(change);
     this.dropTime = time;
     this.hooks.onChange?.();
   }

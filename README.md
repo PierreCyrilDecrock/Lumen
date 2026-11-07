@@ -2,7 +2,7 @@
 
 Jeu de puzzle sur la lumière (réflexion, réfraction, diffusion, dispersion), jouable dans le navigateur sur mobile et sur ordinateur.
 
-> État : étape 4 du [plan de développement](docs/plan-de-developpement.md). La page d'accueil est « Le Zigzag » jouable : tournez et déplacez les miroirs pour guider la lumière jusqu'à la cible. La page `demo/` ajoute les curseurs de rendu.
+> État : étape 5 du [plan de développement](docs/plan-de-developpement.md). 12 niveaux de réflexion jouables, avec menu, sélection des niveaux, étoiles, indices, pause et progression sauvegardée. La page `demo/` garde les curseurs de rendu.
 
 ## Commandes de jeu
 

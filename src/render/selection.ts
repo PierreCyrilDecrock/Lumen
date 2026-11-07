@@ -13,10 +13,23 @@ export interface SelectionView {
   label: string;
   /** Drop bounce scale applied to the selected mirror (1 = rest). */
   bounce: number;
+  /** Index of the mirror highlighted by a hint, or -1. */
+  hint: number;
+  /** Opacity of the hint highlight (pulses unless motion is reduced). */
+  hintAlpha: number;
 }
 
 export function createSelectionView(): SelectionView {
-  return { selected: -1, rotatable: false, dragging: false, ringRadius: 0, label: '', bounce: 1 };
+  return {
+    selected: -1,
+    rotatable: false,
+    dragging: false,
+    ringRadius: 0,
+    label: '',
+    bounce: 1,
+    hint: -1,
+    hintAlpha: 0,
+  };
 }
 
 const TICKS = 24; // One per 15°.
@@ -167,4 +180,22 @@ function clip(p: number, q: number): boolean {
   if (p < 0) clipRange.t0 = Math.max(clipRange.t0, t);
   else clipRange.t1 = Math.min(clipRange.t1, t);
   return clipRange.t0 <= clipRange.t1;
+}
+
+/** Hint highlight: a soft cyan double ring around the mirror to act on. */
+export function drawHint(ctx: CanvasRenderingContext2D, m: Mirror, alpha: number): void {
+  const r = m.length / 2 + 10;
+  ctx.save();
+  ctx.strokeStyle = CYAN;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = alpha * 0.35;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, r + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }

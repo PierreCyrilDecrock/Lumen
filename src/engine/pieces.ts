@@ -39,12 +39,16 @@ export interface Wall {
   length: number;
 }
 
-/** Circular target centred on (x, y); absorbs the ray that reaches it. */
+/**
+ * Circular target centred on (x, y). It absorbs the ray that reaches it, unless
+ * `passThrough` is set: the ray then lights it and carries on.
+ */
 export interface Target {
   id: string;
   x: number;
   y: number;
   radius: number;
+  passThrough?: boolean;
 }
 
 /** Everything the optical engine needs to trace a board. */

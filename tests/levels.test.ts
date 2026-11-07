@@ -1,11 +1,122 @@
 import { describe, expect, it } from 'vitest';
 import { traceRays } from '../src/engine';
-import { ZIGZAG } from '../src/levels';
+import { canPlaceMirror } from '../src/game/placement';
+import { nextHint, solutionRotations } from '../src/game/rules';
+import {
+  LEVELS,
+  LevelValidationError,
+  ZIGZAG,
+  applySolution,
+  parseLevel,
+  toEngineLevel,
+} from '../src/levels';
 
 describe('demo levels', () => {
   it('« Le Zigzag » reaches its target', () => {
     const r = traceRays(ZIGZAG);
     expect(r.allTargetsHit).toBe(true);
     expect(r.truncated).toBe(false);
+  });
+});
+
+describe('level catalogue', () => {
+  it('has unique ids and 12 reflection levels including « Le Zigzag »', () => {
+    const ids = LEVELS.map((l) => l.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const reflection = LEVELS.filter((l) => l.mechanic === 'reflection');
+    expect(reflection).toHaveLength(12);
+    expect(reflection.some((l) => l.title === 'Le Zigzag')).toBe(true);
+  });
+
+  describe.each(LEVELS.map((l) => [`${l.id} ${l.title}`, l] as const))('%s', (_, def) => {
+    it('is not already solved at the start', () => {
+      expect(traceRays(toEngineLevel(def)).allTargetsHit).toBe(false);
+    });
+
+    it('is solved by its reference solution', () => {
+      const level = applySolution(def, toEngineLevel(def));
+      const result = traceRays(level);
+      expect(result.allTargetsHit).toBe(true);
+      expect(nextHint(def, level)).toBe(-1);
+    });
+
+    it('has every mirror legally placed, at the start and once solved', () => {
+      for (const level of [toEngineLevel(def), applySolution(def, toEngineLevel(def))]) {
+        level.mirrors.forEach((m, i) => {
+          expect(canPlaceMirror(level, i, m.x, m.y, m.angle), m.id).toBe(true);
+        });
+      }
+    });
+
+    it('makes 3 stars reachable with the reference solution', () => {
+      expect(solutionRotations(def)).toBeLessThanOrEqual(def.stars[0]);
+    });
+
+    it('hints at the first piece of the solution at the start', () => {
+      const level = toEngineLevel(def);
+      const first = def.solution[0]!.piece;
+      expect(level.mirrors[nextHint(def, level)]?.id).toBe(first);
+    });
+  });
+});
+
+describe('parseLevel', () => {
+  const valid = {
+    id: 'x',
+    title: 'Test',
+    mechanic: 'reflection',
+    board: { width: 390, height: 560 },
+    emitters: [{ id: 'e', x: 10, y: 10, angle: 0 }],
+    targets: [{ id: 't', x: 100, y: 10 }],
+    pieces: [{ type: 'mirror', id: 'm', x: 50, y: 50, angle: 45 }],
+    stars: [3, 5],
+    solution: [{ piece: 'm', angle: 90 }],
+  };
+
+  it('accepts a valid level and fills defaults in the engine level', () => {
+    const def = parseLevel(valid);
+    const level = toEngineLevel(def);
+    expect(level.mirrors[0]!.length).toBe(40);
+    expect(level.targets[0]!.radius).toBe(12);
+  });
+
+  it('lists every problem with its path', () => {
+    const broken = {
+      ...valid,
+      mechanic: 'magic',
+      emitters: [{ id: 'e', x: 'a', y: 10, angle: 0 }],
+      pieces: [
+        { type: 'mirror', id: 'm', x: 50, y: 900, angle: 40 },
+        { type: 'laser', id: 'z', x: 1, y: 1, angle: 0 },
+        { type: 'wall', id: 'm', x: 1, y: 1, angle: 0, length: 5 },
+      ],
+      stars: [5, 3],
+      solution: [{ piece: 'nope', angle: 90 }],
+    };
+    try {
+      parseLevel(broken, 'broken.json');
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(LevelValidationError);
+      const msg = (e as Error).message;
+      expect(msg).toContain('broken.json.mechanic');
+      expect(msg).toContain('emitters[0].x : nombre attendu');
+      expect(msg).toContain('pieces[0].y : doit être entre 0 et 560');
+      expect(msg).toContain('pieces[0].angle : multiple de 15° attendu');
+      expect(msg).toContain('type de pièce inconnu « laser »');
+      expect(msg).toContain('identifiant « m » en double');
+      expect(msg).toContain('stars');
+      expect(msg).toContain('aucun miroir « nope »');
+    }
+  });
+
+  it('rejects a solution that moves a fixed mirror', () => {
+    expect(() => parseLevel({ ...valid, solution: [{ piece: 'm', x: 60 }] })).toThrow(
+      /ne se déplace pas/,
+    );
+  });
+
+  it('rejects something that is not an object', () => {
+    expect(() => parseLevel(42)).toThrow(LevelValidationError);
   });
 });

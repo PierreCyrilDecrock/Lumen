@@ -1,0 +1,40 @@
+{
+  "id": "r01",
+  "title": "Premier reflet",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 60,
+      "y": 300,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 200,
+      "y": 120
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 200,
+      "y": 300,
+      "angle": 90
+    }
+  ],
+  "stars": [3, 5],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 135
+    }
+  ]
+}

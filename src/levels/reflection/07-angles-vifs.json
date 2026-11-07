@@ -1,0 +1,59 @@
+{
+  "id": "r07",
+  "title": "Angles vifs",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 400,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 315,
+      "y": 305
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 140,
+      "y": 400,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 255,
+      "y": 201,
+      "angle": 90
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 330,
+      "y": 140,
+      "angle": 90,
+      "length": 120
+    }
+  ],
+  "stars": [10, 15],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 150
+    },
+    {
+      "piece": "m2",
+      "angle": 0
+    }
+  ]
+}

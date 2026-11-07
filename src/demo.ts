@@ -1,7 +1,11 @@
 import './style.css';
-import { startApp } from './app';
+import './debug-handle';
+import { GameView } from './game-view';
+import { bindKeyboard } from './game/keyboard';
 import { clamp01, createSettings, followReducedMotion, type Settings } from './game/settings';
 import { ZIGZAG, cloneLevel } from './levels';
+import { bindHistoryButtons } from './ui/hud';
+import { fillIcons } from './ui/icons';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
 if (!canvas) throw new Error('Canvas #game introuvable');
@@ -20,7 +24,15 @@ if (motion) {
   });
 }
 
-startApp(canvas, cloneLevel(ZIGZAG), settings);
+fillIcons();
+let refresh = (): void => undefined;
+const game = new GameView(canvas, settings, { onChange: () => refresh() });
+const hud = bindHistoryButtons(() => game.interaction);
+refresh = () => hud.refresh();
+game.load(cloneLevel(ZIGZAG));
+bindKeyboard({ interaction: () => game.interaction, now: () => game.time });
+game.start();
+window.__lumen = { game };
 
 /** Binds a 0-100 range input to a 0-1 setting, live. */
 function bindSlider(id: string, target: Settings, key: 'beamIntensity' | 'impactIntensity'): void {

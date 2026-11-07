@@ -1,0 +1,62 @@
+{
+  "id": "r08",
+  "title": "Glisser",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 60,
+      "y": 140,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 300,
+      "y": 460
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 120,
+      "y": 300,
+      "angle": 45,
+      "movable": true,
+      "rotatable": false
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 200,
+      "y": 460,
+      "angle": 0
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 300,
+      "y": 300,
+      "angle": 0,
+      "length": 80
+    }
+  ],
+  "stars": [3, 5],
+  "solution": [
+    {
+      "piece": "m1",
+      "x": 200,
+      "y": 140
+    },
+    {
+      "piece": "m2",
+      "angle": 45
+    }
+  ]
+}

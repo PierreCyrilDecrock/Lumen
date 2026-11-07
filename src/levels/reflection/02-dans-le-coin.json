@@ -1,0 +1,51 @@
+{
+  "id": "r02",
+  "title": "Dans le coin",
+  "mechanic": "reflection",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 60,
+      "y": 100,
+      "angle": 0
+    }
+  ],
+  "targets": [
+    {
+      "id": "goal",
+      "x": 90,
+      "y": 440
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 300,
+      "y": 100,
+      "angle": 90
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 300,
+      "y": 440,
+      "angle": 0
+    }
+  ],
+  "stars": [6, 9],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "m2",
+      "angle": 135
+    }
+  ]
+}

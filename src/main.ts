@@ -1,7 +1,10 @@
 import './style.css';
-import { startApp } from './app';
+import './debug-handle';
+import { GameView } from './game-view';
+import { bindKeyboard } from './game/keyboard';
 import { createSettings, followReducedMotion } from './game/settings';
-import { zigzagPuzzle } from './levels';
+import { loadSave } from './storage';
+import { GameUi } from './ui/screens';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game');
 if (!canvas) throw new Error('Canvas #game introuvable');
@@ -11,4 +14,32 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 const settings = createSettings();
 followReducedMotion(settings);
-startApp(canvas, zigzagPuzzle(), settings);
+const save = loadSave();
+
+let ui: GameUi | null = null;
+const game = new GameView(canvas, settings, {
+  onChange: () => ui?.refreshHud(),
+  onWin: () => ui?.onWin(),
+  onAngleStep: (pointerType) => {
+    if (pointerType === 'touch') vibrate(8);
+  },
+});
+ui = new GameUi(game, save);
+
+bindKeyboard({
+  interaction: () => (ui?.router.current.name === 'play' ? game.interaction : null),
+  now: () => game.time,
+  onPause: () => ui?.openPause(),
+  onHint: () => ui?.hint(),
+});
+
+window.__lumen = { game, save };
+ui.start();
+
+function vibrate(ms: number): void {
+  try {
+    navigator.vibrate?.(ms);
+  } catch {
+    // Some browsers throw when vibration is blocked: it is only a nicety.
+  }
+}

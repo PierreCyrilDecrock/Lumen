@@ -49,5 +49,8 @@ Les effets ne doivent jamais nuire à la lecture des faisceaux. Jamais de rayon 
 - Pas d'allocation dans les boucles de tracé et de rendu ; les objets d'événement de pointeur sont réutilisés.
 - Rendu (`src/render/scene.ts`) : fond, pièces, lumière additive (halos en cache dans `halo.ts`, sprites d'impact), puis cœur du rayon en dernier. Le cœur fait 3 unités logiques, blanc opaque, et ne lit aucun réglage.
 - Angles en degrés, 0° vers +x, sens horaire à l'écran (y vers le bas) : « \\ » = 45°, « / » = 135°.
-- Interactions (`src/game/interaction.ts`) : sans DOM, testées en simulant des événements logiques. `src/app.ts` relie canvas, entrées, interactions, tracé (une fois par frame au plus) et rendu. `window.__lumen` expose l'état pour les tests de bout en bout.
+- Interactions (`src/game/interaction.ts`) : sans DOM, testées en simulant des événements logiques. `src/game-view.ts` (GameView) relie canvas, entrées, interactions, tracé (une fois par frame au plus), rendu, compteur de rotations, victoire et indices. `window.__lumen` expose l'état pour les tests de bout en bout.
 - Placement (`src/game/placement.ts`) : un miroir reste sur le plateau et ne chevauche ni mur, ni miroir, ni cible, ni émetteur.
+- Niveaux : un fichier JSON par niveau dans `src/levels/<mécanique>/NN-nom.json`, validé par `parseLevel()` (`schema.ts`). Chaque niveau a une solution de référence ; `tests/levels.test.ts` vérifie qu'il n'est pas résolu au départ, que la solution allume toutes les cibles, que les pièces sont bien placées et que 3 étoiles sont atteignables.
+- Étoiles : rotations (pas de 15°, arc le plus court, modulo 180° pour un miroir double face) ≤ `stars[0]` → 3, ≤ `stars[1]` → 2, sinon 1.
+- Interface (`src/ui/`) : écrans en DOM dans `index.html`, routes en hash (`#/`, `#/niveaux`, `#/niveau/r01`) avec `history.pushState`. Sauvegarde : `src/storage/save.ts` (`lumen.save`, `schemaVersion`).
