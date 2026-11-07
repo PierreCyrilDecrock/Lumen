@@ -6,6 +6,8 @@ export interface Settings {
   impactIntensity: number;
   /** Disables pulses and animated rings. */
   reducedMotion: boolean;
+  /** Colour-blind mode: draws a symbol for each colour on targets and filters. */
+  colorSymbols: boolean;
 }
 
 export const DEFAULT_BEAM_INTENSITY = 0.6;
@@ -25,6 +27,7 @@ export function createSettings(reducedMotion = false): Settings {
     beamIntensity: DEFAULT_BEAM_INTENSITY,
     impactIntensity: DEFAULT_IMPACT_INTENSITY,
     reducedMotion,
+    colorSymbols: false,
   };
 }
 

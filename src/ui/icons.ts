@@ -13,6 +13,10 @@ export const ICONS = {
   tray: svg(
     '<path d="M3 13h5l1.5 3h5l1.5-3h5" /><path d="M5 5h14l2 8v6H3v-6z" /><path d="M12 3v7m-3-3 3 3 3-3" />',
   ),
+  sound: svg(
+    '<path d="M4 9v6h4l5 4V5L8 9z" /><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" />',
+  ),
+  mute: svg('<path d="M4 9v6h4l5 4V5L8 9z" /><path d="m16 9 5 6M21 9l-5 6" />'),
   lock: svg(
     '<rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />',
   ),

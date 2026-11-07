@@ -11,13 +11,13 @@ export class DebugOverlay {
   private text = '';
   private nextRefresh = 0;
 
-  draw(gc: GameCanvas, stats: FrameStats, now: number): void {
+  draw(gc: GameCanvas, stats: FrameStats, now: number, quality = 0): void {
     if (!this.visible) return;
     if (now >= this.nextRefresh) {
       this.nextRefresh = now + REFRESH_MS;
       this.text =
         `${stats.averageWork.toFixed(2)} ms/frame (max ${stats.maxWork.toFixed(1)})` +
-        ` · ${stats.fps.toFixed(0)} fps · dpr ${gc.viewport.dpr}`;
+        ` · ${stats.fps.toFixed(0)} fps · dpr ${gc.viewport.dpr} · halos q${quality}`;
     }
     const ctx = gc.ctx;
     const dpr = gc.viewport.dpr;

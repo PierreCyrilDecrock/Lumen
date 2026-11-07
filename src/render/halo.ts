@@ -4,8 +4,8 @@ import { CONE_LENGTH, HALO_AIR, MEDIUM_STYLE } from './theme';
 
 const NO_MEDIA: readonly Medium[] = [];
 
-/** The halo canvas is half the resolution of the screen: it is blurred anyway. */
-const HALO_SCALE = 0.5;
+/** Halo canvas resolution per quality level (it is blurred anyway). */
+const HALO_SCALES = [0.5, 0.35, 0.25] as const;
 
 /** Stroke passes of one halo (wide or medium), from outer to inner. */
 interface HaloPass {
@@ -27,6 +27,25 @@ export class HaloLayer {
   private lastWidth = 0;
   private lastHeight = 0;
   private media: readonly Medium[] = NO_MEDIA;
+  /** 0 = full (blur filter, 5 passes), 1 = reduced (3 passes), 2 = minimal (2 passes). */
+  private quality = 0;
+
+  /** Quality used for the drawing in the cache. */
+  private drawnQuality = -1;
+  /** Quality to draw with now: never full while a piece is being dragged. */
+  private effective = 0;
+
+  private get scale(): number {
+    return HALO_SCALES[this.effective] ?? 0.5;
+  }
+
+  /** Lowers or raises halo quality (automatic quality); forces a redraw. */
+  setQuality(level: number): void {
+    const q = Math.min(Math.max(Math.round(level), 0), HALO_SCALES.length - 1);
+    if (q === this.quality) return;
+    this.quality = q;
+    this.dirty = true;
+  }
   private trace: TraceResult | null = null;
 
   constructor() {
@@ -49,12 +68,17 @@ export class HaloLayer {
     trace: TraceResult,
     intensity: number,
     media: readonly Medium[] = NO_MEDIA,
+    interactive = false,
   ): boolean {
     const segments = trace.segments;
     if (intensity <= 0 || segments.length === 0) return false;
     this.trace = trace;
-    const width = Math.max(Math.ceil(gc.canvas.width * HALO_SCALE), 1);
-    const height = Math.max(Math.ceil(gc.canvas.height * HALO_SCALE), 1);
+    // While dragging, the trace changes every frame: use the fast path, then
+    // redraw once at full quality when the piece is let go.
+    this.effective = interactive ? Math.max(this.quality, 1) : this.quality;
+    if (this.effective !== this.drawnQuality) this.dirty = true;
+    const width = Math.max(Math.ceil(gc.canvas.width * this.scale), 1);
+    const height = Math.max(Math.ceil(gc.canvas.height * this.scale), 1);
     if (
       this.dirty ||
       intensity !== this.lastIntensity ||
@@ -64,6 +88,7 @@ export class HaloLayer {
       this.media = media;
       this.redraw(gc, segments, intensity, width, height);
       this.dirty = false;
+      this.drawnQuality = this.effective;
       this.lastIntensity = intensity;
       this.lastWidth = width;
       this.lastHeight = height;
@@ -85,8 +110,9 @@ export class HaloLayer {
     ctx.clearRect(0, 0, width, height);
 
     const v = gc.viewport;
-    const s = v.dpr * v.scale * HALO_SCALE;
-    ctx.setTransform(s, 0, 0, s, v.dpr * v.offsetX * HALO_SCALE, v.dpr * v.offsetY * HALO_SCALE);
+    const scale = this.scale;
+    const s = v.dpr * v.scale * scale;
+    ctx.setTransform(s, 0, 0, s, v.dpr * v.offsetX * scale, v.dpr * v.offsetY * scale);
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -101,9 +127,17 @@ export class HaloLayer {
       { width: medium, alpha: 0.2 * k, blur: 1.5 + 1.5 * k },
       { width: medium * 0.55, alpha: 0.2 * k, blur: 1 + k },
     ];
-    for (const pass of passes) {
+    // Fewer, wider passes and no blur filter at lower quality.
+    const used =
+      this.effective === 0
+        ? passes
+        : this.effective === 1
+          ? [passes[0]!, passes[2]!, passes[3]!]
+          : [passes[0]!, passes[3]!];
+    const blur = this.supportsFilter && this.effective === 0;
+    for (const pass of used) {
       ctx.lineWidth = pass.width;
-      if (this.supportsFilter) ctx.filter = `blur(${(pass.blur * s).toFixed(2)}px)`;
+      if (blur) ctx.filter = `blur(${(pass.blur * s).toFixed(2)}px)`;
       this.strokeRuns(segments, pass.alpha);
     }
     ctx.filter = 'none';

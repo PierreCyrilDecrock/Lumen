@@ -1,6 +1,7 @@
 import './style.css';
 import './debug-handle';
 import { GameView } from './game-view';
+import { Sound } from './game/audio';
 import { bindKeyboard } from './game/keyboard';
 import { createSettings, followReducedMotion } from './game/settings';
 import { loadSave } from './storage';
@@ -16,18 +17,28 @@ const save = loadSave();
 const settings = createSettings();
 settings.beamIntensity = save.settings.beamIntensity;
 settings.impactIntensity = save.settings.impactIntensity;
+settings.colorSymbols = save.settings.colorSymbols;
 followReducedMotion(settings, () => save.settings.reducedMotion);
+const sound = new Sound();
+sound.enabled = save.settings.sound;
+sound.bindUnlock();
 
 let ui: GameUi | null = null;
 const game = new GameView(canvas, settings, {
   onChange: () => ui?.refreshHud(),
-  onWin: () => ui?.onWin(),
+  onWin: () => {
+    sound.victory();
+    ui?.onWin();
+  },
+  onCommit: () => sound.click(),
+  onGoalLit: () => sound.chime(),
   onTrace: () => ui?.refreshOptics(),
   onAngleStep: (pointerType) => {
+    sound.notch();
     if (pointerType === 'touch') vibrate(8);
   },
 });
-ui = new GameUi(game, save, settings);
+ui = new GameUi(game, save, settings, sound);
 
 bindKeyboard({
   interaction: () => (ui?.router.current.name === 'play' ? game.interaction : null),

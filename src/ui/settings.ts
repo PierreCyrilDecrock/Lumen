@@ -8,6 +8,7 @@ import {
 } from '../game/settings';
 import { writeSave, type SaveData } from '../storage';
 import { SettingsPreview } from './preview';
+import type { Sound } from '../game/audio';
 
 function $<T extends HTMLElement = HTMLElement>(selector: string): T {
   const el = document.querySelector<T>(selector);
@@ -25,10 +26,14 @@ export class SettingsScreen {
   private readonly beam = $<HTMLInputElement>('#set-beam');
   private readonly impact = $<HTMLInputElement>('#set-impact');
   private readonly motion = $<HTMLInputElement>('#set-motion');
+  private readonly soundToggle = $<HTMLInputElement>('#set-sound');
+  private readonly symbols = $<HTMLInputElement>('#set-symbols');
 
   constructor(
     private readonly settings: Settings,
     private readonly save: SaveData,
+    private readonly sound: Sound,
+    private readonly onSoundChange: () => void = () => undefined,
   ) {
     this.preview = new SettingsPreview($<HTMLCanvasElement>('#settings-preview'), settings);
     const onSlider = (input: HTMLInputElement, key: 'beamIntensity' | 'impactIntensity') => {
@@ -47,6 +52,12 @@ export class SettingsScreen {
         this.motion.checked === systemPrefersReducedMotion() ? null : this.motion.checked;
       this.persist();
     });
+    this.soundToggle.addEventListener('change', () => this.setSound(this.soundToggle.checked));
+    this.symbols.addEventListener('change', () => {
+      settings.colorSymbols = this.symbols.checked;
+      this.save.settings.colorSymbols = this.symbols.checked;
+      this.persist();
+    });
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
       button.addEventListener('click', () => {
         applyPreset(settings, button.dataset.preset as PresetName);
@@ -59,6 +70,16 @@ export class SettingsScreen {
   show(): void {
     this.refresh();
     this.preview.start();
+  }
+
+  /** Sound on or off, saved (also used by the in-game sound button). */
+  setSound(on: boolean): void {
+    this.sound.enabled = on;
+    this.save.settings.sound = on;
+    if (on) this.sound.unlock();
+    this.persist();
+    this.refresh();
+    this.onSoundChange();
   }
 
   hide(): void {
@@ -74,6 +95,8 @@ export class SettingsScreen {
     $('#set-beam-value').textContent = `${beam} %`;
     $('#set-impact-value').textContent = `${impact} %`;
     this.motion.checked = s.reducedMotion;
+    this.soundToggle.checked = this.sound.enabled;
+    this.symbols.checked = s.colorSymbols;
     const preset = currentPreset(s);
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
       button.setAttribute('aria-pressed', String(button.dataset.preset === preset));

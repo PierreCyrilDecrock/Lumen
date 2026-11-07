@@ -145,6 +145,29 @@ export function drawAngleLabel(
   ctx.fillText(view.label, x, y + 0.5);
 }
 
+/**
+ * True when a box centred on (cx, cy), `w` × `h` logical units, stays on the
+ * board and covers no beam. Shared by the angle label and the tutorial bubble.
+ */
+export function boxClearOfBeams(
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+  beams: readonly BeamSegment[],
+  boardWidth: number,
+  boardHeight: number,
+): boolean {
+  const hw = w / 2;
+  const hh = h / 2;
+  if (cx - hw < 0 || cx + hw > boardWidth || cy - hh < 0 || cy + hh > boardHeight) return false;
+  for (let i = 0; i < beams.length; i++) {
+    const b = beams[i]!;
+    if (segmentHitsBox(b.x1, b.y1, b.x2, b.y2, cx - hw, cy - hh, cx + hw, cy + hh)) return false;
+  }
+  return true;
+}
+
 /** True when a label box centred on (cx, cy) is on the board and clear of every beam. */
 function labelFits(
   cx: number,

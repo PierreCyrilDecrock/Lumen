@@ -17,6 +17,10 @@ export interface SavedSettings {
   impactIntensity: number;
   /** null: follow the system preference (prefers-reduced-motion). */
   reducedMotion: boolean | null;
+  /** Sound effects on. */
+  sound: boolean;
+  /** Colour-blind mode: a symbol for each colour on targets and filters. */
+  colorSymbols: boolean;
 }
 
 export interface SaveData {
@@ -36,6 +40,8 @@ export const DEFAULT_SAVED_SETTINGS: Readonly<SavedSettings> = {
   beamIntensity: 0.6,
   impactIntensity: 0.6,
   reducedMotion: null,
+  sound: true,
+  colorSymbols: false,
 };
 
 export function emptySave(): SaveData {
@@ -85,6 +91,9 @@ function sanitizeSettings(raw: unknown): SavedSettings {
     beamIntensity: unit(s.beamIntensity, DEFAULT_SAVED_SETTINGS.beamIntensity),
     impactIntensity: unit(s.impactIntensity, DEFAULT_SAVED_SETTINGS.impactIntensity),
     reducedMotion: typeof s.reducedMotion === 'boolean' ? s.reducedMotion : null,
+    sound: typeof s.sound === 'boolean' ? s.sound : DEFAULT_SAVED_SETTINGS.sound,
+    colorSymbols:
+      typeof s.colorSymbols === 'boolean' ? s.colorSymbols : DEFAULT_SAVED_SETTINGS.colorSymbols,
   };
 }
 

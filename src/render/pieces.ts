@@ -34,6 +34,7 @@ import {
   WALL_LINE,
   WALL_THICKNESS,
 } from './theme';
+import { BAND_COLORS, drawColorSymbol } from './symbols';
 
 /** Piece drawing in logical units. No allocation: canvas state only. */
 
@@ -308,6 +309,7 @@ export function drawFilter(
   f: Filter,
   scale = 1,
   selected = false,
+  symbols = false,
 ): void {
   const half = f.length / 2;
   const w = MIRROR_WIDTH;
@@ -326,6 +328,20 @@ export function drawFilter(
   ctx.strokeStyle = selected ? CYAN : 'rgba(255, 255, 255, 0.6)';
   ctx.strokeRect(-half, -w / 2, f.length, w);
   ctx.restore();
+  if (symbols) {
+    // Colour-blind mode: the symbols of the colours it lets through, above it.
+    const n = f.bands.length;
+    for (let i = 0; i < n; i++) {
+      const name = BAND_COLORS[f.bands[i]!]!;
+      const x = f.x + (i - (n - 1) / 2) * 11;
+      const y = f.y - 14;
+      ctx.beginPath();
+      ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#0B0F1A';
+      ctx.fill();
+      drawColorSymbol(ctx, name, x, y, 3.6, COLOR_HEX[name]);
+    }
+  }
 }
 
 /**
@@ -337,6 +353,7 @@ export function drawColorTarget(
   t: ColorTarget,
   lit: boolean,
   receivedCss: string | null,
+  symbols = false,
 ): void {
   const hex = COLOR_HEX[t.color];
   ctx.beginPath();
@@ -350,4 +367,17 @@ export function drawColorTarget(
   ctx.arc(t.x, t.y, t.radius * (lit ? 0.6 : 0.38), 0, Math.PI * 2);
   ctx.fillStyle = lit ? hex : (receivedCss ?? 'rgba(138, 147, 166, 0.35)');
   ctx.fill();
+  if (symbols) {
+    // Colour-blind mode: the needed colour's symbol, in a badge beside the target.
+    const bx = t.x + t.radius * 0.95;
+    const by = t.y - t.radius * 0.95;
+    ctx.beginPath();
+    ctx.arc(bx, by, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0B0F1A';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = hex;
+    ctx.stroke();
+    drawColorSymbol(ctx, t.color, bx, by, 4, hex);
+  }
 }

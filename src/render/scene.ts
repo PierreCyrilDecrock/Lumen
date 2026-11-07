@@ -64,6 +64,14 @@ export class SceneRenderer {
     this.refreshColorCss();
   }
 
+  /** True while a piece is being dragged: halos use their fast path. */
+  interactive = false;
+
+  /** Halo quality: 0 = full, 1 = reduced, 2 = minimal (automatic quality). */
+  setHaloQuality(level: number): void {
+    this.halo.setQuality(level);
+  }
+
   /** Call after re-tracing into the same TraceResult. */
   traceChanged(): void {
     this.halo.invalidate();
@@ -137,7 +145,8 @@ export class SceneRenderer {
     const filterOffset = prismOffset + prisms.length;
     for (let i = 0; i < filters.length; i++) {
       const isSelected = sel !== null && sel.selected === filterOffset + i;
-      drawFilter(ctx, filters[i]!, isSelected ? sel.bounce : 1, isSelected);
+      const symbols = this.settings.colorSymbols;
+      drawFilter(ctx, filters[i]!, isSelected ? sel.bounce : 1, isSelected, symbols);
     }
     for (let i = 0; i < level.targets.length; i++) {
       drawTarget(ctx, level.targets[i]!, trace.targetsHit[i] === true);
@@ -145,7 +154,8 @@ export class SceneRenderer {
     const colorTargets = level.colorTargets ?? [];
     for (let i = 0; i < colorTargets.length; i++) {
       const lit = trace.colorTargetsLit[i] === true;
-      drawColorTarget(ctx, colorTargets[i]!, lit, this.colorCss[i] ?? null);
+      const css = this.colorCss[i] ?? null;
+      drawColorTarget(ctx, colorTargets[i]!, lit, css, this.settings.colorSymbols);
     }
     const crystals = level.crystals ?? [];
     for (let i = 0; i < crystals.length; i++) {
@@ -192,7 +202,7 @@ export class SceneRenderer {
     if (!trace || !level) return;
     const ctx = gc.ctx;
 
-    if (this.halo.update(gc, trace, settings.beamIntensity, media)) {
+    if (this.halo.update(gc, trace, settings.beamIntensity, media, this.interactive)) {
       gc.useDeviceSpace();
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(this.halo.canvas, 0, 0, gc.canvas.width, gc.canvas.height);

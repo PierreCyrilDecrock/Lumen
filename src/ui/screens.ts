@@ -1,6 +1,8 @@
 import { COLOR_HEX, COLOR_LABELS, MATERIALS, type Material } from '../engine';
 import type { GameView } from '../game-view';
-import { isMedium } from '../game/interaction';
+import { isMedium, isMovable, ringRadius, rotationPeriod } from '../game/interaction';
+import { TUTORIALS, Tutorial } from '../game/tutorial';
+import { displayAngle } from '../game/snap';
 import { CHAPTER_TITLES, LEVELS, findLevel, levelIndex, nextLevel } from '../levels';
 import { MECHANICS } from '../levels/schema';
 import { isCompleted, recordResult, writeSave, type SaveData } from '../storage';
@@ -8,6 +10,9 @@ import { bindHistoryButtons, type Hud } from './hud';
 import { ICONS, fillIcons, starsHtml } from './icons';
 import { Router, type Route } from './router';
 import { SettingsScreen } from './settings';
+import type { Sound } from '../game/audio';
+import { COLOR_GLYPHS } from '../render/symbols';
+import { boxClearOfBeams } from '../render/selection';
 import type { Settings } from '../game/settings';
 
 function $<T extends HTMLElement = HTMLElement>(selector: string): T {
@@ -29,19 +34,22 @@ export class GameUi {
   private overlayReturnFocus: HTMLElement | null = null;
 
   private readonly settingsScreen: SettingsScreen;
+  private readonly settings: Settings;
 
   constructor(
     private readonly game: GameView,
     private readonly save: SaveData,
     settings: Settings,
+    private readonly sound: Sound,
   ) {
+    this.settings = settings;
     this.screens = {
       menu: $('#screen-menu'),
       levels: $('#screen-levels'),
       settings: $('#screen-settings'),
       play: $('#screen-play'),
     };
-    this.settingsScreen = new SettingsScreen(settings, save);
+    this.settingsScreen = new SettingsScreen(settings, save, sound, () => this.refreshSound());
     this.router = new Router((route) => this.show(route));
     this.hud = bindHistoryButtons(() => game.interaction);
     fillIcons();
@@ -53,6 +61,10 @@ export class GameUi {
       el.addEventListener('click', () => this.router.back());
     }
     $('#play-pause').addEventListener('click', () => this.openPause());
+    $('#play-sound').addEventListener('click', () =>
+      this.settingsScreen.setSound(!this.sound.enabled),
+    );
+    this.refreshSound();
     $('#play-hint').addEventListener('click', () => this.hint());
     $('#play-store').addEventListener('click', () =>
       this.game.interaction?.storeSelected(this.game.time),
@@ -113,6 +125,8 @@ export class GameUi {
     $<HTMLButtonElement>('#play-hint').disabled = game.won;
     const selected = game.interaction?.selectedPiece;
     $('#play-store').hidden = !(selected && isMedium(selected) && selected.trayable === true);
+    this.announceSelection();
+    this.updateTutorial();
     this.renderTray();
     this.refreshFrost();
     this.refreshOptics();
@@ -156,7 +170,7 @@ export class GameUi {
       const name = COLOR_LABELS[t.color];
       const state = lit ? 'allumée' : max > 0 ? 'reçoit une autre couleur' : 'éteinte';
       html += `<span class="color-chip${lit ? ' lit' : ''}" role="listitem" aria-label="Cible ${name} : ${state}">
-        <span class="color-dot" style="background:${COLOR_HEX[t.color]}"></span>${name}
+        <span class="color-dot" style="background:${COLOR_HEX[t.color]}"></span>${this.settings.colorSymbols ? `<span class="color-glyph" aria-hidden="true">${COLOR_GLYPHS[t.color]}</span>` : ''}${name}
         <span class="color-arrow" aria-hidden="true">←</span>
         <span class="color-dot received" style="background:${received}"></span>${lit ? '<span class="color-ok" aria-hidden="true">✓</span>' : ''}</span>`;
     });
@@ -199,6 +213,118 @@ export class GameUi {
           <span class="tray-swatch" aria-hidden="true"></span>${name}<span class="tray-count">×${count}</span></button>`;
       })
       .join('');
+  }
+
+  private lastAnnounced = '';
+
+  /** Screen reader message for the selected piece (type, angle, movable). */
+  private announceSelection(): void {
+    const p = this.game.interaction?.selectedPiece;
+    let text = '';
+    if (p) {
+      const kind = isMedium(p)
+        ? `Bloc ${MATERIALS[p.material].name.toLowerCase()}`
+        : 'spread' in p
+          ? 'Verre dépoli'
+          : 'size' in p
+            ? 'Prisme'
+            : 'bands' in p
+              ? 'Filtre'
+              : 'Miroir';
+      const angle = displayAngle(p.angle, rotationPeriod(p));
+      text = `${kind} sélectionné, ${angle}°${isMovable(p) ? ', déplaçable' : ''}.`;
+    }
+    if (text !== this.lastAnnounced) {
+      this.lastAnnounced = text;
+      if (text) $('#play-message').textContent = text;
+    }
+  }
+
+  private tutorial: Tutorial | null = null;
+  private tutorialFrame = 0;
+
+  /** Starts the tutorial bubbles of a level, if it has some. */
+  private startTutorial(levelId: string): void {
+    const steps = TUTORIALS[levelId];
+    this.tutorial = steps ? new Tutorial(steps) : null;
+    this.updateTutorial();
+  }
+
+  /** Advances the tutorial and places its bubble next to the piece it is about. */
+  private updateTutorial(): void {
+    const bubble = $('#tutorial');
+    const game = this.game;
+    const interaction = game.interaction;
+    const tutorial = this.tutorial;
+    if (tutorial && interaction) {
+      tutorial.update(interaction.selectedPiece?.id ?? null, game.rotations);
+    }
+    const step = tutorial?.current;
+    const piece = step && interaction ? interaction.piece(interaction.indexOf(step.piece)) : null;
+    const visible = !!step && !!piece && !game.won && this.router.current.name === 'play';
+    bubble.hidden = !visible;
+    cancelAnimationFrame(this.tutorialFrame);
+    if (!visible || !step || !piece) return;
+    setText($('#tutorial-text'), step.text);
+    bubble.dataset.gesture = step.gesture;
+    const place = (): void => {
+      const v = game.gc.viewport;
+      const level = game.level;
+      let x = piece.x;
+      let y = piece.y;
+      let preferBelow = false;
+      if (step.anchor === 'handle') {
+        const a = (piece.angle * Math.PI) / 180;
+        x += Math.cos(a) * ringRadius(piece);
+        y += Math.sin(a) * ringRadius(piece);
+        preferBelow = Math.sin(a) > 0.2;
+      }
+      // Bubble size in board units; keep it off the beams (golden rule).
+      const w = bubble.offsetWidth / v.scale;
+      const h = bubble.offsetHeight / v.scale;
+      const gap = 22 / v.scale + h / 2;
+      const reach = step.anchor === 'handle' ? 14 : ringRadius(piece);
+      const options = preferBelow ? [1, -1] : [-1, 1];
+      let side = options[0]!;
+      let cx = x;
+      for (const candidate of options) {
+        const cy = y + candidate * (gap + reach * 0.4);
+        const clampedX = Math.min(Math.max(x, w / 2 + 2), (level?.width ?? 390) - w / 2 - 2);
+        const clear = boxClearOfBeams(
+          clampedX,
+          cy,
+          w,
+          h,
+          game.trace.segments,
+          level?.width ?? 390,
+          level?.height ?? 560,
+        );
+        if (clear) {
+          side = candidate;
+          cx = clampedX;
+          break;
+        }
+        cx = clampedX;
+      }
+      const below = side > 0;
+      const offset = reach * 0.4 * v.scale;
+      const cssX = v.offsetX + cx * v.scale;
+      const cssY = v.offsetY + y * v.scale;
+      const arrowShift = (x - cx) * v.scale;
+      bubble.style.setProperty('--arrow-x', `${arrowShift.toFixed(1)}px`);
+      bubble.style.transform = `translate(${cssX.toFixed(1)}px, ${cssY.toFixed(1)}px) translate(-50%, ${below ? `${(22 + offset).toFixed(1)}px` : `calc(-100% - ${(22 + offset).toFixed(1)}px)`})`;
+      bubble.classList.toggle('below', below);
+      this.tutorialFrame = requestAnimationFrame(place);
+    };
+    place();
+  }
+
+  /** Sound button: icon and pressed state follow the setting. */
+  private refreshSound(): void {
+    const button = $('#play-sound');
+    button.setAttribute('aria-pressed', String(this.sound.enabled));
+    button.setAttribute('aria-label', this.sound.enabled ? 'Couper le son' : 'Activer le son');
+    button.innerHTML = this.sound.enabled ? ICONS.sound : ICONS.mute;
   }
 
   /** Opens the pause overlay (Escape key or pause button). */
@@ -260,9 +386,12 @@ export class GameUi {
       this.game.load(def);
       this.game.setLocked(false);
       this.game.start();
+      this.startTutorial(def.id);
       return;
     }
     this.game.stop();
+    this.tutorial = null;
+    this.updateTutorial();
     if (route.name === 'levels') this.renderLevels();
     if (route.name === 'settings') this.settingsScreen.show();
     else this.settingsScreen.hide();

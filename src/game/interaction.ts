@@ -245,6 +245,59 @@ export class Interaction {
     return true;
   }
 
+  /**
+   * Keyboard selection: selects the next (or previous) piece on the board.
+   * Returns false when it runs past the last (or first) piece and deselects,
+   * so that Tab can move the focus on.
+   */
+  selectNext(step: 1 | -1): boolean {
+    if (this.mode !== 'none') return true;
+    for (let i = this.selected + step; i >= 0 && i < this.total; i += step) {
+      const p = this.piece(i);
+      if (p && isSelectable(p)) {
+        this.selected = i;
+        this.hooks.onChange?.();
+        return true;
+      }
+    }
+    if (this.selected >= 0 && step === -1 && this.selected === this.firstSelectable()) {
+      this.deselect();
+      return false;
+    }
+    this.deselect();
+    return false;
+  }
+
+  /** From no selection, Shift+Tab starts at the last piece. */
+  selectLast(): boolean {
+    this.selected = this.total;
+    const found = this.selectNext(-1);
+    if (!found) this.selected = -1;
+    return found;
+  }
+
+  private firstSelectable(): number {
+    for (let i = 0; i < this.total; i++) {
+      const p = this.piece(i);
+      if (p && isSelectable(p)) return i;
+    }
+    return -1;
+  }
+
+  /** Moves the selection by (dx, dy) grid steps (keyboard). */
+  moveSelected(dx: number, dy: number, time: number): boolean {
+    const p = this.selectedPiece;
+    if (!p || !isMovable(p) || this.mode !== 'none' || this.locked) return false;
+    const x = snapToGrid(p.x + dx * GRID_STEP);
+    const y = snapToGrid(p.y + dy * GRID_STEP);
+    if (!this.canPlace(this.selected, x, y, p.angle)) return false;
+    const from = poseOf(p);
+    p.x = x;
+    p.y = y;
+    this.commit(this.selected, from, time);
+    return true;
+  }
+
   /** Blocks of each material still in the tray. */
   trayCounts(): Partial<Record<Material, number>> {
     const counts: Partial<Record<Material, number>> = {};

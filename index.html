@@ -87,6 +87,14 @@
           <input id="set-motion" type="checkbox" role="switch" />
           <span>Réduire les animations</span>
         </label>
+        <label class="toggle">
+          <input id="set-sound" type="checkbox" role="switch" />
+          <span>Son</span>
+        </label>
+        <label class="toggle">
+          <input id="set-symbols" type="checkbox" role="switch" />
+          <span>Mode daltonien : un symbole pour chaque couleur</span>
+        </label>
         <p class="settings-note">
           Le cœur du faisceau reste toujours net et continu, quels que soient ces réglages.
         </p>
@@ -104,6 +112,15 @@
         ></button>
         <h1 id="play-title" tabindex="-1"></h1>
         <div class="app-actions">
+          <button
+            id="play-sound"
+            class="icon-button"
+            type="button"
+            data-icon="sound"
+            aria-label="Son"
+            aria-pressed="true"
+            title="Son activé ou coupé"
+          ></button>
           <button
             id="play-pause"
             class="icon-button"
@@ -177,9 +194,15 @@
         <canvas
           id="game"
           class="game-canvas"
-          role="img"
-          aria-label="Plateau : tournez et déplacez les miroirs pour guider la lumière jusqu'aux cibles"
+          tabindex="0"
+          role="application"
+          aria-roledescription="plateau de jeu"
+          aria-label="Plateau. Tab pour choisir une pièce, flèches pour la déplacer, R pour la tourner"
         ></canvas>
+        <div id="tutorial" class="tutorial" role="status" hidden>
+          <span class="tutorial-gesture" aria-hidden="true"></span>
+          <span id="tutorial-text"></span>
+        </div>
       </main>
       <div id="tray" class="tray" role="group" aria-label="Bac de matières" hidden></div>
       <p id="play-message" class="sr-only" aria-live="polite"></p>

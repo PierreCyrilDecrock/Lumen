@@ -91,7 +91,13 @@ describe('save', () => {
   it('round-trips the settings and repairs corrupt values', () => {
     const storage = new MemoryStorage();
     const save = emptySave();
-    save.settings = { beamIntensity: 0.3, impactIntensity: 1, reducedMotion: true };
+    save.settings = {
+      beamIntensity: 0.3,
+      impactIntensity: 1,
+      reducedMotion: true,
+      sound: false,
+      colorSymbols: true,
+    };
     writeSave(save, storage);
     expect(loadSave(storage).settings).toEqual(save.settings);
 
@@ -103,6 +109,7 @@ describe('save', () => {
       }),
     );
     expect(loadSave(storage).settings).toEqual({
+      ...DEFAULT_SAVED_SETTINGS,
       beamIntensity: 1,
       impactIntensity: DEFAULT_SAVED_SETTINGS.impactIntensity,
       reducedMotion: null,

@@ -11,6 +11,7 @@ import {
   type PieceChange,
 } from './game/interaction';
 import { GameLoop } from './game/loop';
+import { QualityGovernor } from './game/quality';
 import { nextHint, rotationSteps, starsFor, type HintKind } from './game/rules';
 import type { Settings } from './game/settings';
 import { displayAngle } from './game/snap';
@@ -41,6 +42,8 @@ export interface GameViewHooks {
   onCommit?(): void;
   /** The light paths were re-traced. */
   onTrace?(): void;
+  /** A target or a crystal has just lit up after a player move. */
+  onGoalLit?(): void;
 }
 
 /**
@@ -63,6 +66,10 @@ export class GameView {
   private readonly scene: SceneRenderer;
   private readonly loop: GameLoop;
   private readonly debug = new DebugOverlay();
+  /** Goals lit at the last trace, to detect new ones. */
+  private lastLit = 0;
+  /** Automatic halo quality, lowered when frames are too slow. */
+  readonly quality = new QualityGovernor();
   private readonly view = createSelectionView();
   private labelAngle = Number.NaN;
   private winAt = Infinity;
@@ -97,6 +104,7 @@ export class GameView {
     this.definition = isDefinition ? source : null;
     this.level = isDefinition ? toEngineLevel(source) : source;
     this.rotations = 0;
+    this.lastLit = Number.POSITIVE_INFINITY;
     this.won = false;
     this.winAt = Infinity;
     this.hint = -1;
@@ -175,6 +183,15 @@ export class GameView {
     this.loop.stop();
   }
 
+  /** Targets, crystals and colour targets currently lit. */
+  private litGoals(): number {
+    const t = this.trace;
+    let n = t.crystalsLit;
+    for (const hit of t.targetsHit) if (hit) n++;
+    for (const hit of t.colorTargetsLit) if (hit) n++;
+    return n;
+  }
+
   private countMove(change: PieceChange): void {
     const p = this.interaction?.piece(change.index);
     if (p) this.rotations += rotationSteps(change.from.angle, change.to.angle, rotationPeriod(p));
@@ -186,6 +203,7 @@ export class GameView {
   private update(dt: number): void {
     this.stats.begin(performance.now());
     this.time += dt;
+    if (this.quality.feed(dt * 1000)) this.scene.setHaloQuality(this.quality.level);
     const { interaction, level } = this;
     if (!interaction || !level) return;
     // Re-trace at most once per frame, however many pointer events arrived.
@@ -194,6 +212,9 @@ export class GameView {
       this.scene.traceChanged();
       interaction.dirty = false;
       this.hooks.onTrace?.();
+      const lit = this.litGoals();
+      if (lit > this.lastLit && interaction.history.size > 0) this.hooks.onGoalLit?.();
+      this.lastLit = lit;
     }
     // Victory once the player has let go of a piece with every target lit.
     const solved = this.trace.solved && interaction.history.size > 0 && interaction.mode === 'none';
@@ -217,10 +238,12 @@ export class GameView {
   private render(): void {
     this.gc.syncSize();
     this.updateView();
+    const mode = this.interaction?.mode;
+    this.scene.interactive = mode === 'rotate' || mode === 'move';
     this.scene.draw(this.time, this.view);
     const now = performance.now();
     this.stats.end(now);
-    this.debug.draw(this.gc, this.stats, now);
+    this.debug.draw(this.gc, this.stats, now, this.quality.level);
   }
 
   private updateView(): void {

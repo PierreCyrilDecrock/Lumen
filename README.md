@@ -2,7 +2,7 @@
 
 Jeu de puzzle sur la lumière (réflexion, réfraction, diffusion, dispersion), jouable dans le navigateur sur mobile et sur ordinateur.
 
-> État : étape 9 du [plan de développement](docs/plan-de-developpement.md). 44 niveaux en quatre chapitres, écran titre, réglages (faisceau, impacts, réduire les animations, préréglages, aperçu en direct) et sauvegarde.
+> État : étape 10 du [plan de développement](docs/plan-de-developpement.md). 44 niveaux, son généré, tutoriel, mode daltonien, jeu complet au clavier, qualité automatique, tests de bout en bout.
 
 ## Commandes de jeu
 
@@ -31,6 +31,7 @@ npm run dev       # http://localhost:5173, et l'adresse réseau local pour teste
 npm test          # Vitest
 npm run lint      # ESLint + Prettier
 npm run typecheck # TypeScript strict
+npm run test:e2e  # Playwright (téléphone et ordinateur), sur le build servi sous /Lumen/
 ```
 
 ## Construire

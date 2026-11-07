@@ -1,5 +1,6 @@
 import type { Interaction } from './interaction';
 import { ANGLE_STEP } from './snap';
+import { isMovable } from './interaction';
 
 export interface KeyboardActions {
   /** Current board, or null when no level is being played. */
@@ -12,7 +13,8 @@ export interface KeyboardActions {
 }
 
 /**
- * Keyboard shortcuts: R / Shift+R and Left / Right arrows rotate the selection by
+ * Keyboard play: Tab / Shift+Tab on the board choose a piece, arrows move it on
+ * the grid (or turn it, Left / Right, when it cannot move), R / Shift+R turn it by
  * ±15°, Ctrl+Z undoes, Ctrl+Shift+Z (or Ctrl+Y) redoes, Escape deselects (or
  * pauses), H shows a hint. Cmd replaces Ctrl on macOS. Ignored while a form
  * field has the focus.
@@ -32,8 +34,25 @@ export function bindKeyboard(actions: KeyboardActions, target: Window = window):
     const key = e.key.toLowerCase();
     const mod = e.ctrlKey || e.metaKey;
     const now = actions.now();
+    const onBoard = el instanceof HTMLCanvasElement;
+    const movable = (): boolean => {
+      const p = interaction.selectedPiece;
+      return !!p && isMovable(p);
+    };
     let handled = true;
-    if (mod && key === 'z') {
+    if (key === 'tab' && !mod && !e.altKey) {
+      // On the board, Tab walks through the pieces, then lets the focus leave.
+      if (!onBoard) return;
+      const moved =
+        e.shiftKey && interaction.selected < 0
+          ? interaction.selectLast()
+          : interaction.selectNext(e.shiftKey ? -1 : 1);
+      if (!moved) return;
+    } else if (key.startsWith('arrow') && !mod && movable()) {
+      const dx = key === 'arrowleft' ? -1 : key === 'arrowright' ? 1 : 0;
+      const dy = key === 'arrowup' ? -1 : key === 'arrowdown' ? 1 : 0;
+      interaction.moveSelected(dx, dy, now);
+    } else if (mod && key === 'z') {
       if (e.shiftKey) interaction.redo();
       else interaction.undo();
     } else if (mod && key === 'y') {

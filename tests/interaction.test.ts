@@ -185,3 +185,31 @@ describe('Interaction', () => {
     expect(interaction.cursorAt(200, 350)).toBe('grabbing');
   });
 });
+
+describe('keyboard play', () => {
+  it('walks through the pieces with Tab, then lets the focus leave', () => {
+    const { interaction } = setup();
+    expect(interaction.selectNext(1)).toBe(true);
+    expect(interaction.selected).toBe(0);
+    expect(interaction.selectNext(1)).toBe(true);
+    expect(interaction.selectNext(1)).toBe(true);
+    expect(interaction.selected).toBe(2);
+    expect(interaction.selectNext(1)).toBe(false);
+    expect(interaction.selected).toBe(-1);
+    expect(interaction.selectLast()).toBe(true);
+    expect(interaction.selected).toBe(2);
+    expect(interaction.selectNext(-1)).toBe(true);
+    expect(interaction.selectNext(-1)).toBe(true);
+    expect(interaction.selectNext(-1)).toBe(false);
+  });
+
+  it('moves a movable piece by one grid step, and refuses the others', () => {
+    const { level, interaction } = setup();
+    interaction.selected = 1; // m2, movable.
+    expect(interaction.moveSelected(1, 0, 0)).toBe(true);
+    expect([level.mirrors[1]!.x, level.mirrors[1]!.y]).toEqual([210, 350]);
+    expect(interaction.history.size).toBe(1);
+    interaction.selected = 0; // m1, fixed.
+    expect(interaction.moveSelected(0, 1, 0)).toBe(false);
+  });
+});
