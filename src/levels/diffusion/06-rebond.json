@@ -1,0 +1,72 @@
+{
+  "id": "d06",
+  "title": "Rebond",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 460,
+      "angle": 0
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 198,
+      "y": 98,
+      "threshold": 0.02
+    },
+    {
+      "id": "c2",
+      "x": 265.3,
+      "y": 289.8,
+      "threshold": 0.07
+    },
+    {
+      "id": "c3",
+      "x": 172.5,
+      "y": 356.2,
+      "threshold": 0.02
+    }
+  ],
+  "pieces": [
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 130,
+      "y": 460,
+      "angle": 90,
+      "spread": 40
+    },
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 345,
+      "y": 300,
+      "angle": 90,
+      "length": 300,
+      "rotatable": false
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 200,
+      "y": 230,
+      "angle": 90,
+      "length": 160
+    }
+  ],
+  "stars": [2, 4],
+  "solution": [
+    {
+      "piece": "d1",
+      "angle": 60
+    }
+  ]
+}

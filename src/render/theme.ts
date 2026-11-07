@@ -45,3 +45,12 @@ export const MEDIUM_STYLE = {
 
 /** Thin solid normals at interfaces. */
 export const NORMAL_COLOR = 'rgba(234, 246, 255, 0.4)';
+
+export const DIFFUSER_FILL = 'rgba(225, 235, 255, 0.32)';
+export const DIFFUSER_EDGE = 'rgba(235, 245, 255, 0.75)';
+export const DIFFUSER_WIDTH = 7;
+/** Crystals: unlit outline, lit fill (ice blue). */
+export const CRYSTAL_DIM = '#5E6C85';
+export const CRYSTAL_LIT: readonly [number, number, number] = [200, 245, 255];
+/** Fan cones in the halo layer. */
+export const CONE_LENGTH = 220;

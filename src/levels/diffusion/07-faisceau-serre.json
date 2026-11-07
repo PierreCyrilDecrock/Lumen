@@ -1,0 +1,50 @@
+{
+  "id": "d07",
+  "title": "Faisceau serré",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 520,
+      "angle": 300
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 270,
+      "y": 121.6,
+      "threshold": 0.03
+    },
+    {
+      "id": "c2",
+      "x": 226.3,
+      "y": 111.1,
+      "threshold": 0.03
+    }
+  ],
+  "pieces": [
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 100,
+      "y": 416,
+      "angle": 30,
+      "spread": 90,
+      "adjustable": true
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "d1",
+      "spread": 20
+    }
+  ]
+}

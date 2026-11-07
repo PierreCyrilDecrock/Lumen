@@ -1,0 +1,95 @@
+{
+  "id": "d04",
+  "title": "Brume",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 280,
+      "angle": 0
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 335,
+      "y": 462.6,
+      "threshold": 0.05
+    },
+    {
+      "id": "c2",
+      "x": 290,
+      "y": 500,
+      "threshold": 0.05
+    },
+    {
+      "id": "c3",
+      "x": 245,
+      "y": 462.6,
+      "threshold": 0.05
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 100,
+      "y": 280,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m2",
+      "x": 100,
+      "y": 100,
+      "angle": 0
+    },
+    {
+      "type": "mirror",
+      "id": "m3",
+      "x": 290,
+      "y": 100,
+      "angle": 0
+    },
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 290,
+      "y": 330,
+      "angle": 0,
+      "spread": 50,
+      "rotatable": false
+    },
+    {
+      "type": "fog",
+      "id": "f1",
+      "x": 195,
+      "y": 280,
+      "angle": 0,
+      "width": 120,
+      "height": 140,
+      "density": 0.04
+    }
+  ],
+  "stars": [9, 15],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 135
+    },
+    {
+      "piece": "m2",
+      "angle": 135
+    },
+    {
+      "piece": "m3",
+      "angle": 45
+    }
+  ]
+}

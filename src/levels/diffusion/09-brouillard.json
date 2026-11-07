@@ -1,0 +1,65 @@
+{
+  "id": "d09",
+  "title": "Brouillard",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 195,
+      "y": 520,
+      "angle": 270
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 257.1,
+      "y": 168.2,
+      "threshold": 0.04
+    },
+    {
+      "id": "c2",
+      "x": 353.3,
+      "y": 193.7,
+      "threshold": 0.04
+    },
+    {
+      "id": "c3",
+      "x": 368.2,
+      "y": 300,
+      "threshold": 0.04
+    }
+  ],
+  "pieces": [
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 195,
+      "y": 400,
+      "angle": 330,
+      "spread": 60
+    },
+    {
+      "type": "fog",
+      "id": "f1",
+      "x": 110,
+      "y": 200,
+      "angle": 0,
+      "width": 160,
+      "height": 220,
+      "density": 0.035
+    }
+  ],
+  "stars": [4, 7],
+  "solution": [
+    {
+      "piece": "d1",
+      "angle": 30
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "d03",
+  "title": "Miroir et verre",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 90,
+      "angle": 0
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 357.4,
+      "y": 398.6,
+      "threshold": 0.05
+    },
+    {
+      "id": "c2",
+      "x": 324.8,
+      "y": 448.4,
+      "threshold": 0.04
+    },
+    {
+      "id": "c3",
+      "x": 273.9,
+      "y": 458.3,
+      "threshold": 0.04
+    },
+    {
+      "id": "c4",
+      "x": 230,
+      "y": 381.2,
+      "threshold": 0.04
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 300,
+      "y": 90,
+      "angle": 0
+    },
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 300,
+      "y": 260,
+      "angle": 0,
+      "spread": 60,
+      "rotatable": false
+    }
+  ],
+  "stars": [3, 6],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    }
+  ]
+}

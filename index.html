@@ -67,6 +67,11 @@
         <div class="hud-stats">
           <span class="hud-counter"><strong id="play-rotations">0</strong> rotations</span>
           <span id="play-stars" class="hud-stars" role="img"></span>
+          <span id="play-crystals" class="hud-counter" hidden
+            >Cristaux <strong id="play-crystals-lit">0</strong>/<span id="play-crystals-total"
+              >0</span
+            ></span
+          >
         </div>
         <div class="app-actions">
           <button
@@ -104,6 +109,11 @@
           ></button>
         </div>
       </div>
+      <label id="play-frost" class="hud-frost" hidden>
+        <span>Dépoli du verre</span>
+        <input id="play-frost-input" type="range" min="20" max="90" step="5" />
+        <output id="play-frost-value" for="play-frost-input"></output>
+      </label>
       <p id="play-optics" class="hud-optics" aria-live="polite" hidden></p>
       <main class="app-stage">
         <canvas

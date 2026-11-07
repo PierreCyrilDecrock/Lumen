@@ -3,6 +3,7 @@ import {
   pointPolygonDistance,
   pointSegmentDistance,
   rectCorners,
+  type Diffuser,
   type Level,
   type Material,
   type Medium,
@@ -21,6 +22,8 @@ export interface Pose {
   angle: number;
   /** For tray blocks: true while in the tray. */
   stored: boolean;
+  /** For diffusers: fan opening (NaN otherwise). */
+  spread: number;
 }
 
 /** One undoable change of a piece (`index` in the unified piece list). */
@@ -32,8 +35,8 @@ export interface PieceChange {
 
 export type DragMode = 'none' | 'rotate' | 'move' | 'press';
 
-/** A piece the player can handle: a mirror or a transparent block. */
-export type Piece = Mirror | Medium;
+/** A piece the player can handle: a mirror, a transparent block or frosted glass. */
+export type Piece = Mirror | Medium | Diffuser;
 
 export interface InteractionHooks {
   /** Pointer capture radius in logical units (44 CSS px wide zone). */
@@ -49,8 +52,10 @@ export interface InteractionHooks {
 /** Gap between a piece and its rotation ring. */
 const RING_GAP = 16;
 const NO_MEDIA: Medium[] = [];
+const NO_DIFFUSERS: Diffuser[] = [];
 
 export const isMedium = (p: Piece): p is Medium => 'material' in p;
+export const isDiffuser = (p: Piece): p is Diffuser => 'spread' in p;
 export const isRotatable = (p: Piece): boolean => p.rotatable !== false;
 export const isMovable = (p: Piece): boolean =>
   p.movable === true || (isMedium(p) && p.trayable === true);
@@ -69,7 +74,7 @@ export function armStart(p: Piece): number {
 
 /** True when the piece looks the same after a half turn. */
 export function isHalfTurnSymmetric(p: Piece): boolean {
-  return isMedium(p) || p.doubleSided !== false;
+  return isMedium(p) || isDiffuser(p) || p.doubleSided !== false;
 }
 
 /**
@@ -88,35 +93,81 @@ export class Interaction {
   /** While true (pause, victory), the player can no longer change anything. */
   locked = false;
 
-  private readonly start: Pose = { x: 0, y: 0, angle: 0, stored: false };
+  private readonly start: Pose = { x: 0, y: 0, angle: 0, stored: false, spread: Number.NaN };
+  /** Pose before the frosted-glass slider started moving, or null. */
+  private spreadStart: Pose | null = null;
   private grabDx = 0;
   private grabDy = 0;
   private grabAngle = 0;
   private readonly seg: SegmentCoords = { ax: 0, ay: 0, bx: 0, by: 0 };
   private readonly poly = new Float64Array(8);
   private readonly media: Medium[];
+  private readonly diffusers: Diffuser[];
 
   constructor(
     readonly level: Level,
     private readonly hooks: InteractionHooks,
   ) {
     this.media = (level.media as Medium[] | undefined) ?? NO_MEDIA;
+    this.diffusers = (level.diffusers as Diffuser[] | undefined) ?? NO_DIFFUSERS;
   }
 
+  /** Pieces are indexed mirrors, then media, then diffusers. */
   get pieceCount(): number {
-    return this.level.mirrors.length + this.media.length;
+    return this.level.mirrors.length + this.media.length + this.diffusers.length;
   }
 
   piece(index: number): Piece | null {
-    const mirrors = this.level.mirrors;
     if (index < 0) return null;
-    return index < mirrors.length
-      ? (mirrors[index] ?? null)
-      : (this.media[index - mirrors.length] ?? null);
+    const m = this.level.mirrors.length;
+    if (index < m) return this.level.mirrors[index] ?? null;
+    if (index < m + this.media.length) return this.media[index - m] ?? null;
+    return this.diffusers[index - m - this.media.length] ?? null;
   }
 
   kindOf(index: number): PieceKind {
-    return index < this.level.mirrors.length ? 'mirror' : 'medium';
+    const m = this.level.mirrors.length;
+    return index < m ? 'mirror' : index < m + this.media.length ? 'medium' : 'diffuser';
+  }
+
+  /** Index of `index` within its own kind's list. */
+  private localIndex(index: number): number {
+    const m = this.level.mirrors.length;
+    const kind = this.kindOf(index);
+    return kind === 'mirror'
+      ? index
+      : kind === 'medium'
+        ? index - m
+        : index - m - this.media.length;
+  }
+
+  /** The diffuser the « Dépoli » slider acts on: the selected one, else the first adjustable one. */
+  adjustableDiffuser(): number {
+    const selected = this.selectedPiece;
+    if (selected && isDiffuser(selected) && selected.adjustable === true) return this.selected;
+    const i = this.diffusers.findIndex((d) => d.adjustable === true);
+    return i < 0 ? -1 : this.level.mirrors.length + this.media.length + i;
+  }
+
+  /**
+   * Sets the fan opening of diffuser `index` (slider). Preview updates are live;
+   * `commit` records one undoable change from where the slider started.
+   */
+  setSpread(index: number, spread: number, time: number, commit: boolean): boolean {
+    const p = this.piece(index);
+    if (!p || !isDiffuser(p) || p.adjustable !== true || this.locked || this.mode !== 'none')
+      return false;
+    this.spreadStart ??= poseOf(p);
+    if (p.spread !== spread) {
+      p.spread = spread;
+      this.dirty = true;
+    }
+    if (commit) {
+      const from = this.spreadStart;
+      this.spreadStart = null;
+      if (from.spread !== p.spread) this.commit(index, from, time);
+    }
+    return true;
   }
 
   /** Unified index of the piece with this id, or -1. */
@@ -243,9 +294,7 @@ export class Interaction {
   }
 
   canPlace(index: number, x: number, y: number, angle: number): boolean {
-    const offset = this.level.mirrors.length;
-    const kind = this.kindOf(index);
-    return canPlace(this.level, kind, kind === 'mirror' ? index : index - offset, x, y, angle);
+    return canPlace(this.level, this.kindOf(index), this.localIndex(index), x, y, angle);
   }
 
   private commit(index: number, from: Pose, time: number): void {
@@ -363,6 +412,7 @@ export class Interaction {
     p.y = pose.y;
     p.angle = pose.angle;
     if (isMedium(p) && p.trayable === true) p.stored = pose.stored;
+    if (isDiffuser(p) && !Number.isNaN(pose.spread)) p.spread = pose.spread;
     this.selected = pose.stored ? -1 : index;
     this.dirty = true;
     this.hooks.onChange?.();
@@ -419,7 +469,13 @@ export class Interaction {
 }
 
 function poseOf(p: Piece): Pose {
-  return { x: p.x, y: p.y, angle: p.angle, stored: isMedium(p) && p.stored === true };
+  return {
+    x: p.x,
+    y: p.y,
+    angle: p.angle,
+    stored: isMedium(p) && p.stored === true,
+    spread: isDiffuser(p) ? p.spread : Number.NaN,
+  };
 }
 
 function copyPose(p: Piece, out: Pose): void {
@@ -427,6 +483,7 @@ function copyPose(p: Piece, out: Pose): void {
   out.y = p.y;
   out.angle = p.angle;
   out.stored = isMedium(p) && p.stored === true;
+  out.spread = isDiffuser(p) ? p.spread : Number.NaN;
 }
 
 /** Angle of the pointer seen from the piece centre, in degrees. */

@@ -71,3 +71,22 @@ describe('rotatable blocks', () => {
     expect(slab.angle).toBe(15);
   });
 });
+
+describe('frosted glass slider', () => {
+  it('previews live, commits one undoable change, and solves « Éventail »', () => {
+    const { level, interaction } = setup('d02');
+    const index = interaction.adjustableDiffuser();
+    expect(index).toBeGreaterThanOrEqual(0);
+    const d = level.diffusers![0]!;
+    expect(d.spread).toBe(20);
+    for (const value of [40, 60, 80]) interaction.setSpread(index, value, 0, false);
+    expect(d.spread).toBe(80);
+    expect(interaction.history.size).toBe(0);
+    interaction.setSpread(index, 80, 0, true);
+    expect(interaction.history.size).toBe(1);
+    expect(traceRays(level).solved).toBe(true);
+    interaction.undo();
+    expect(d.spread).toBe(20);
+    expect(traceRays(level).solved).toBe(false);
+  });
+});

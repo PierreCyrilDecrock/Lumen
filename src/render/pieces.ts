@@ -1,8 +1,13 @@
-import type { Emitter, Medium, Mirror, Target, Wall } from '../engine';
+import type { Crystal, Diffuser, Emitter, Medium, Mirror, Target, Wall } from '../engine';
 import { DEG_TO_RAD } from '../engine';
 import {
   AMBER,
+  CRYSTAL_DIM,
+  CRYSTAL_LIT,
   CYAN,
+  DIFFUSER_EDGE,
+  DIFFUSER_FILL,
+  DIFFUSER_WIDTH,
   EMITTER_BODY,
   EMITTER_LINE,
   MEDIUM_STYLE,
@@ -177,4 +182,72 @@ export function drawMedium(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** Frosted glass plate: pale translucent bar with a speckled surface. */
+export function drawDiffuser(
+  ctx: CanvasRenderingContext2D,
+  d: Diffuser,
+  scale = 1,
+  selected = false,
+): void {
+  const half = d.length / 2;
+  const w = DIFFUSER_WIDTH;
+  ctx.save();
+  ctx.translate(d.x, d.y);
+  ctx.rotate(d.angle * DEG_TO_RAD);
+  if (scale !== 1) ctx.scale(scale, scale);
+  ctx.beginPath();
+  ctx.roundRect(-half, -w / 2, d.length, w, 2);
+  ctx.fillStyle = DIFFUSER_FILL;
+  ctx.fill();
+  ctx.lineWidth = selected ? 2 : 1;
+  ctx.strokeStyle = selected ? CYAN : DIFFUSER_EDGE;
+  ctx.stroke();
+  // Speckles: a fixed, deterministic pattern of tiny dots.
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  for (let i = 0; i < 9; i++) {
+    const x = -half + 3 + (((i * 37) % 97) / 97) * (d.length - 6);
+    const y = (((i * 53) % 29) / 29 - 0.5) * (w - 3);
+    ctx.fillRect(x, y, 1.2, 1.2);
+  }
+  if (d.movable === true) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = EMITTER_BODY;
+    ctx.fill();
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Crystal: a diamond-shaped gem whose fill grows with the light it gathers. */
+export function drawCrystal(ctx: CanvasRenderingContext2D, c: Crystal, progress: number): void {
+  const rx = c.radius * 0.85;
+  const ry = c.radius * 1.25;
+  ctx.beginPath();
+  ctx.moveTo(c.x, c.y - ry);
+  ctx.lineTo(c.x + rx, c.y);
+  ctx.lineTo(c.x, c.y + ry);
+  ctx.lineTo(c.x - rx, c.y);
+  ctx.closePath();
+  ctx.fillStyle = '#0B1220';
+  ctx.fill();
+  if (progress > 0) {
+    const [r, g, b] = CRYSTAL_LIT;
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(0.15 + 0.85 * progress).toFixed(2)})`;
+    ctx.fill();
+  }
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = progress >= 1 ? '#FFFFFF' : CRYSTAL_DIM;
+  ctx.stroke();
+  // Facet line.
+  ctx.beginPath();
+  ctx.moveTo(c.x - rx, c.y);
+  ctx.lineTo(c.x + rx, c.y);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = progress >= 1 ? 'rgba(2, 3, 10, 0.35)' : 'rgba(94, 108, 133, 0.6)';
+  ctx.stroke();
 }

@@ -2,13 +2,14 @@ import {
   pointPolygonDistance,
   polygonsOverlap,
   rectCorners,
+  type Diffuser,
   type Level,
   type Medium,
   type Mirror,
 } from '../engine';
 import { MIRROR_WIDTH, WALL_THICKNESS } from '../render/theme';
 
-export type PieceKind = 'mirror' | 'medium';
+export type PieceKind = 'mirror' | 'medium' | 'diffuser';
 
 /** Free space kept between a piece and the board edge. */
 const EDGE_MARGIN = 4;
@@ -20,9 +21,10 @@ const MIRROR_GAP = 2;
 const candidate = new Float64Array(8);
 const other = new Float64Array(8);
 const NO_MEDIA: readonly Medium[] = [];
+const NO_DIFFUSERS: readonly Diffuser[] = [];
 
 function mirrorPolygon(
-  m: Mirror,
+  m: Mirror | Diffuser,
   x: number,
   y: number,
   angle: number,
@@ -45,10 +47,13 @@ export function canPlace(
   angle: number,
 ): boolean {
   const media = level.media ?? NO_MEDIA;
-  const self = kind === 'mirror' ? level.mirrors[index] : media[index];
+  const diffusers = level.diffusers ?? NO_DIFFUSERS;
+  const self =
+    kind === 'mirror' ? level.mirrors[index] : kind === 'medium' ? media[index] : diffusers[index];
   if (!self) return false;
-  if (kind === 'mirror') mirrorPolygon(self as Mirror, x, y, angle, candidate);
-  else rectCorners(x, y, (self as Medium).width, (self as Medium).height, angle, candidate);
+  if ('width' in self) rectCorners(x, y, self.width, self.height, angle, candidate);
+  else mirrorPolygon(self, x, y, angle, candidate);
+  const thin = kind !== 'medium';
 
   for (let i = 0; i < 4; i++) {
     const px = candidate[i * 2]!;
@@ -69,8 +74,14 @@ export function canPlace(
   for (let i = 0; i < level.mirrors.length; i++) {
     if (kind === 'mirror' && i === index) continue;
     const m = level.mirrors[i]!;
-    const gap = kind === 'mirror' ? MIRROR_GAP * 2 : 0;
+    const gap = thin ? MIRROR_GAP * 2 : 0;
     if (polygonsOverlap(candidate, mirrorPolygon(m, m.x, m.y, m.angle, other, gap))) return false;
+  }
+  for (let i = 0; i < diffusers.length; i++) {
+    if (kind === 'diffuser' && i === index) continue;
+    const d = diffusers[i]!;
+    const gap = thin ? MIRROR_GAP * 2 : 0;
+    if (polygonsOverlap(candidate, mirrorPolygon(d, d.x, d.y, d.angle, other, gap))) return false;
   }
   for (let i = 0; i < media.length; i++) {
     if (kind === 'medium' && i === index) continue;
@@ -81,6 +92,9 @@ export function canPlace(
   }
   for (const t of level.targets) {
     if (pointPolygonDistance(t.x, t.y, candidate) < t.radius + 1) return false;
+  }
+  for (const c of level.crystals ?? []) {
+    if (pointPolygonDistance(c.x, c.y, candidate) < c.radius + 1) return false;
   }
   for (const e of level.emitters) {
     if (pointPolygonDistance(e.x, e.y, candidate) < EMITTER_CLEARANCE) return false;

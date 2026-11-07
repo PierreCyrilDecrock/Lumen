@@ -3,7 +3,16 @@ import { TARGET_THRESHOLD } from '../engine';
 import type { Settings } from '../game/settings';
 import type { GameCanvas } from './canvas';
 import { HaloLayer } from './halo';
-import { drawEmitter, drawMedium, drawMirror, drawTarget, drawWall } from './pieces';
+import { FogPainter } from './fog';
+import {
+  drawCrystal,
+  drawDiffuser,
+  drawEmitter,
+  drawMedium,
+  drawMirror,
+  drawTarget,
+  drawWall,
+} from './pieces';
 import {
   drawAngleLabel,
   drawHint,
@@ -16,6 +25,7 @@ import { AMBER, BACKGROUND, BEAM_CORE_COLOR, BEAM_CORE_WIDTH, NORMAL_COLOR } fro
 
 const COOL: readonly number[] = [170, 225, 255];
 const WARM: readonly number[] = [255, 184, 77];
+const ICE: readonly number[] = [200, 245, 255];
 /** Seconds per target ring pulse. */
 const PULSE_PERIOD = 2.2;
 /** Faint rays (partial reflections) are thin lines. */
@@ -36,6 +46,8 @@ export class SceneRenderer {
   private readonly impactCool = makeImpactSprite(COOL);
   private readonly impactWarm = makeImpactSprite(WARM);
   private readonly glowWarm = makeGlowSprite(WARM);
+  private readonly glowIce = makeGlowSprite(ICE);
+  private readonly fog = new FogPainter();
 
   constructor(
     private readonly gc: GameCanvas,
@@ -74,6 +86,7 @@ export class SceneRenderer {
     const selectedPiece: Placed | undefined = sel ? pieceAt(level, sel.selected) : undefined;
 
     gc.useLogicalSpace();
+    for (const f of level.fogs ?? []) this.fog.draw(ctx, f);
     for (let i = 0; i < media.length; i++) {
       const isSelected = sel !== null && sel.selected === mirrorCount + i;
       drawMedium(ctx, media[i]!, isSelected ? sel.bounce : 1, isSelected);
@@ -83,8 +96,18 @@ export class SceneRenderer {
       const isSelected = sel !== null && sel.selected === i;
       drawMirror(ctx, level.mirrors[i]!, isSelected ? sel.bounce : 1, isSelected);
     }
+    const diffusers = level.diffusers ?? [];
+    const diffuserOffset = mirrorCount + media.length;
+    for (let i = 0; i < diffusers.length; i++) {
+      const isSelected = sel !== null && sel.selected === diffuserOffset + i;
+      drawDiffuser(ctx, diffusers[i]!, isSelected ? sel.bounce : 1, isSelected);
+    }
     for (let i = 0; i < level.targets.length; i++) {
       drawTarget(ctx, level.targets[i]!, trace.targetsHit[i] === true);
+    }
+    const crystals = level.crystals ?? [];
+    for (let i = 0; i < crystals.length; i++) {
+      drawCrystal(ctx, crystals[i]!, trace.crystalProgress[i] ?? 0);
     }
     this.drawNormals();
     const hinted = selection && selection.hint >= 0 ? pieceAt(level, selection.hint) : undefined;
@@ -129,7 +152,7 @@ export class SceneRenderer {
     if (!trace || !level) return;
     const ctx = gc.ctx;
 
-    if (this.halo.update(gc, trace.segments, settings.beamIntensity, media)) {
+    if (this.halo.update(gc, trace, settings.beamIntensity, media)) {
       gc.useDeviceSpace();
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(this.halo.canvas, 0, 0, gc.canvas.width, gc.canvas.height);
@@ -154,6 +177,19 @@ export class SceneRenderer {
           4 * s,
           2 * s,
         );
+      }
+    }
+
+    // Crystals glow with the light they gather, fully once lit.
+    const crystals = level.crystals ?? [];
+    if (k > 0) {
+      for (let i = 0; i < crystals.length; i++) {
+        const progress = trace.crystalProgress[i] ?? 0;
+        if (progress <= 0) continue;
+        const c = crystals[i]!;
+        const s = c.radius * (progress >= 1 ? 2.4 + 1.4 * k : 1.6);
+        ctx.globalAlpha = (progress >= 1 ? 0.55 + 0.45 * k : 0.35 * progress) * k;
+        ctx.drawImage(this.glowIce, c.x - s, c.y - s, 2 * s, 2 * s);
       }
     }
 
@@ -217,10 +253,13 @@ export class SceneRenderer {
   }
 }
 
-/** Piece at a unified index: mirrors first, then media. */
+/** Piece at a unified index: mirrors, then media, then diffusers. */
 function pieceAt(level: Level, index: number): Placed | undefined {
-  const mirrors = level.mirrors;
-  return index < mirrors.length ? mirrors[index] : level.media?.[index - mirrors.length];
+  const m = level.mirrors.length;
+  const n = level.media?.length ?? 0;
+  if (index < m) return level.mirrors[index];
+  if (index < m + n) return level.media?.[index - m];
+  return level.diffusers?.[index - m - n];
 }
 
 function hintRadius(p: Placed): number {

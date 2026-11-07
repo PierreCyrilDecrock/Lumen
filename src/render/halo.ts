@@ -1,6 +1,6 @@
-import type { BeamSegment, Medium } from '../engine';
+import { CONE_FIELDS, type BeamSegment, type Medium, type TraceResult } from '../engine';
 import type { GameCanvas } from './canvas';
-import { HALO_AIR, MEDIUM_STYLE } from './theme';
+import { CONE_LENGTH, HALO_AIR, MEDIUM_STYLE } from './theme';
 
 const NO_MEDIA: readonly Medium[] = [];
 
@@ -27,6 +27,7 @@ export class HaloLayer {
   private lastWidth = 0;
   private lastHeight = 0;
   private media: readonly Medium[] = NO_MEDIA;
+  private trace: TraceResult | null = null;
 
   constructor() {
     const ctx = this.canvas.getContext('2d');
@@ -45,11 +46,13 @@ export class HaloLayer {
   /** Brings the cache up to date. Returns false when there is nothing to show. */
   update(
     gc: GameCanvas,
-    segments: readonly BeamSegment[],
+    trace: TraceResult,
     intensity: number,
     media: readonly Medium[] = NO_MEDIA,
   ): boolean {
+    const segments = trace.segments;
     if (intensity <= 0 || segments.length === 0) return false;
+    this.trace = trace;
     const width = Math.max(Math.ceil(gc.canvas.width * HALO_SCALE), 1);
     const height = Math.max(Math.ceil(gc.canvas.height * HALO_SCALE), 1);
     if (
@@ -104,7 +107,37 @@ export class HaloLayer {
       this.strokeRuns(segments, pass.alpha);
     }
     ctx.filter = 'none';
+    this.drawCones(k);
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /** Diffusion fans: soft gradient volumes under the thin rays. */
+  private drawCones(k: number): void {
+    const trace = this.trace;
+    if (!trace || trace.coneCount === 0) return;
+    const ctx = this.ctx;
+    const c = trace.cones;
+    for (let i = 0; i < trace.coneCount; i++) {
+      const o = i * CONE_FIELDS;
+      const x = c[o]!;
+      const y = c[o + 1]!;
+      const axis = c[o + 2]!;
+      const spread = c[o + 3]!;
+      const intensity = c[o + 4]!;
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, CONE_LENGTH);
+      const a = 0.22 * k * intensity;
+      gradient.addColorStop(
+        0,
+        `rgba(${HALO_AIR[0]}, ${HALO_AIR[1]}, ${HALO_AIR[2]}, ${a.toFixed(3)})`,
+      );
+      gradient.addColorStop(1, `rgba(${HALO_AIR[0]}, ${HALO_AIR[1]}, ${HALO_AIR[2]}, 0)`);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, CONE_LENGTH, axis - spread / 2, axis + spread / 2);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
   }
 
   /** Strokes each contiguous run of same-coloured segments as one polyline. */

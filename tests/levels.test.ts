@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { traceRays } from '../src/engine';
+import { MAX_RAYS, traceRays } from '../src/engine';
 import { canPlace } from '../src/game/placement';
 import { nextHint, solutionRotations } from '../src/game/rules';
 import {
@@ -44,15 +44,24 @@ describe('level catalogue', () => {
     expect(withTotalReflection.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('has 10 diffusion levels including « La grotte aux cristaux »', () => {
+    const diffusion = LEVELS.filter((l) => l.mechanic === 'diffusion');
+    expect(diffusion).toHaveLength(10);
+    expect(diffusion.some((l) => l.title === 'La grotte aux cristaux')).toBe(true);
+    expect(diffusion.every((l) => l.crystals.length > 0)).toBe(true);
+    expect(diffusion.some((l) => l.pieces.some((p) => p.type === 'fog'))).toBe(true);
+  });
+
   describe.each(LEVELS.map((l) => [`${l.id} ${l.title}`, l] as const))('%s', (_, def) => {
     it('is not already solved at the start', () => {
-      expect(traceRays(toEngineLevel(def)).allTargetsHit).toBe(false);
+      expect(traceRays(toEngineLevel(def)).solved).toBe(false);
     });
 
     it('is solved by its reference solution', () => {
       const level = applySolution(def, toEngineLevel(def));
       const result = traceRays(level);
-      expect(result.allTargetsHit).toBe(true);
+      expect(result.solved).toBe(true);
+      expect(result.rayCount).toBeLessThanOrEqual(MAX_RAYS);
       expect(nextHint(def, level)).toBeNull();
     });
 

@@ -197,8 +197,7 @@ export class GameView {
       this.hooks.onTrace?.();
     }
     // Victory once the player has let go of a piece with every target lit.
-    const solved =
-      this.trace.allTargetsHit && interaction.history.size > 0 && interaction.mode === 'none';
+    const solved = this.trace.solved && interaction.history.size > 0 && interaction.mode === 'none';
     if (this.definition && solved && !this.won) {
       this.won = true;
       interaction.locked = true;

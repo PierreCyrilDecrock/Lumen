@@ -367,6 +367,32 @@ body.app {
   font-variant-numeric: tabular-nums;
 }
 
+/* « Dépoli du verre » slider (diffusion). */
+.hud-frost {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.hud-frost input {
+  flex: 1;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--cyan);
+}
+
+.hud-frost output {
+  width: 36px;
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Optics readout and tray of materials (refraction). */
 .hud-optics {
   margin: 0;

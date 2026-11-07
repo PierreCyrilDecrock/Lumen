@@ -1,0 +1,78 @@
+{
+  "id": "d05",
+  "title": "Cible et cristaux",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "s1",
+      "x": 40,
+      "y": 80,
+      "angle": 0
+    },
+    {
+      "id": "s2",
+      "x": 350,
+      "y": 520,
+      "angle": 270
+    }
+  ],
+  "targets": [
+    {
+      "id": "t1",
+      "x": 300,
+      "y": 170
+    }
+  ],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 217,
+      "y": 311.1,
+      "threshold": 0.04
+    },
+    {
+      "id": "c2",
+      "x": 250,
+      "y": 226.8,
+      "threshold": 0.04
+    },
+    {
+      "id": "c3",
+      "x": 338.2,
+      "y": 220.4,
+      "threshold": 0.04
+    }
+  ],
+  "pieces": [
+    {
+      "type": "mirror",
+      "id": "m1",
+      "x": 300,
+      "y": 80,
+      "angle": 90
+    },
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 350,
+      "y": 400,
+      "angle": 90,
+      "spread": 70
+    }
+  ],
+  "stars": [7, 12],
+  "solution": [
+    {
+      "piece": "m1",
+      "angle": 45
+    },
+    {
+      "piece": "d1",
+      "angle": 330
+    }
+  ]
+}

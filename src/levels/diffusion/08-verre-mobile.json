@@ -1,0 +1,66 @@
+{
+  "id": "d08",
+  "title": "Verre mobile",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 40,
+      "y": 160,
+      "angle": 0
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 336.5,
+      "y": 85.4,
+      "threshold": 0.04
+    },
+    {
+      "id": "c2",
+      "x": 344.4,
+      "y": 196.1,
+      "threshold": 0.05
+    },
+    {
+      "id": "c3",
+      "x": 344.7,
+      "y": 240.3,
+      "threshold": 0.04
+    }
+  ],
+  "pieces": [
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 120,
+      "y": 470,
+      "angle": 90,
+      "spread": 70,
+      "movable": true,
+      "rotatable": false
+    },
+    {
+      "type": "wall",
+      "id": "w1",
+      "x": 330,
+      "y": 340,
+      "angle": 90,
+      "length": 100
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "d1",
+      "x": 230,
+      "y": 160
+    }
+  ]
+}

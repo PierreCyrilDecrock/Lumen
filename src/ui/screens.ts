@@ -49,6 +49,16 @@ export class GameUi {
     $('#play-store').addEventListener('click', () =>
       this.game.interaction?.storeSelected(this.game.time),
     );
+    const frost = $<HTMLInputElement>('#play-frost-input');
+    const onFrost = (commit: boolean): void => {
+      const interaction = this.game.interaction;
+      const index = interaction?.adjustableDiffuser() ?? -1;
+      if (!interaction || index < 0) return;
+      interaction.setSpread(index, Number(frost.value), this.game.time, commit);
+      $('#play-frost-value').textContent = `${frost.value}°`;
+    };
+    frost.addEventListener('input', () => onFrost(false));
+    frost.addEventListener('change', () => onFrost(true));
     $('#tray').addEventListener('click', (e) => {
       const button = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-material]');
       const material = button?.dataset.material as Material | undefined;
@@ -96,16 +106,38 @@ export class GameUi {
     const selected = game.interaction?.selectedPiece;
     $('#play-store').hidden = !(selected && isMedium(selected) && selected.trayable === true);
     this.renderTray();
+    this.refreshFrost();
     this.refreshOptics();
     this.hud.refresh();
   }
 
-  /** Entry / exit angles line, for levels with blocks. */
+  /** Per-trace readouts: entry / exit angles, crystals lit. */
   refreshOptics(): void {
     const el = $('#play-optics');
     const text = this.game.opticsSummary();
     el.hidden = text === '';
     if (el.textContent !== text) el.textContent = text;
+
+    const total = this.game.level?.crystals?.length ?? 0;
+    $('#play-crystals').hidden = total === 0;
+    if (total > 0) {
+      setText($('#play-crystals-lit'), String(this.game.trace.crystalsLit));
+      setText($('#play-crystals-total'), String(total));
+    }
+  }
+
+  /** « Dépoli du verre » slider, for levels with an adjustable diffuser. */
+  private refreshFrost(): void {
+    const interaction = this.game.interaction;
+    const index = interaction?.adjustableDiffuser() ?? -1;
+    const piece = interaction?.piece(index);
+    const row = $('#play-frost');
+    row.hidden = !piece || !('spread' in piece);
+    if (!piece || !('spread' in piece)) return;
+    const input = $<HTMLInputElement>('#play-frost-input');
+    if (document.activeElement !== input) input.value = String(piece.spread);
+    input.disabled = interaction?.locked === true;
+    setText($('#play-frost-value'), `${piece.spread}°`);
   }
 
   /** One button per material that the level keeps in its tray. */
@@ -144,7 +176,9 @@ export class GameUi {
           ? 'Indice : tournez la pièce surlignée.'
           : kind === 'place'
             ? 'Indice : posez un bloc depuis le bac.'
-            : '';
+            : kind === 'adjust'
+              ? 'Indice : réglez le dépoli du verre.'
+              : '';
   }
 
   /** Called by the game once every target is lit. */
@@ -276,4 +310,8 @@ export class GameUi {
       first.focus();
     }
   }
+}
+
+function setText(el: HTMLElement, text: string): void {
+  if (el.textContent !== text) el.textContent = text;
 }

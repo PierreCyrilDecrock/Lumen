@@ -1,0 +1,57 @@
+{
+  "id": "d02",
+  "title": "Éventail",
+  "mechanic": "diffusion",
+  "board": {
+    "width": 390,
+    "height": 560
+  },
+  "emitters": [
+    {
+      "id": "source",
+      "x": 195,
+      "y": 520,
+      "angle": 270
+    }
+  ],
+  "targets": [],
+  "crystals": [
+    {
+      "id": "c1",
+      "x": 85.7,
+      "y": 299.8,
+      "threshold": 0.04
+    },
+    {
+      "id": "c2",
+      "x": 195,
+      "y": 210,
+      "threshold": 0.04
+    },
+    {
+      "id": "c3",
+      "x": 304.3,
+      "y": 299.8,
+      "threshold": 0.04
+    }
+  ],
+  "pieces": [
+    {
+      "type": "diffuser",
+      "id": "d1",
+      "x": 195,
+      "y": 430,
+      "angle": 0,
+      "spread": 20,
+      "adjustable": true,
+      "rotatable": false
+    }
+  ],
+  "stars": [0, 1],
+  "solution": [
+    {
+      "piece": "d1",
+      "spread": 80
+    }
+  ]
+}

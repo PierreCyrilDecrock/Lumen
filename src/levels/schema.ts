@@ -1,5 +1,11 @@
 import {
+  DEFAULT_CRYSTAL_RADIUS,
+  DEFAULT_CRYSTAL_THRESHOLD,
   MATERIALS,
+  SPREAD_MAX,
+  SPREAD_MIN,
+  type Diffuser,
+  type Fog,
   type Level,
   type Material,
   type Medium,
@@ -66,7 +72,46 @@ export interface MediumDef {
   inTray?: boolean;
 }
 
-export type PieceDef = MirrorDef | WallDef | MediumDef;
+/** Frosted glass plate: replaces a ray by a fan of `spread` degrees. */
+export interface DiffuserDef {
+  type: 'diffuser';
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  length?: number;
+  spread: number;
+  rays?: number;
+  rotatable?: boolean;
+  movable?: boolean;
+  /** The « Dépoli du verre » slider can change its spread. */
+  adjustable?: boolean;
+}
+
+/** Fog bank: absorbs light crossing it. */
+export interface FogDef {
+  type: 'fog';
+  id: string;
+  x: number;
+  y: number;
+  angle: number;
+  width: number;
+  height: number;
+  density: number;
+}
+
+export interface CrystalDef {
+  id: string;
+  x: number;
+  y: number;
+  radius?: number;
+  threshold?: number;
+}
+
+export type PieceDef = MirrorDef | WallDef | MediumDef | DiffuserDef | FogDef;
+
+/** Pieces the player can act on. */
+export type ActivePieceDef = MirrorDef | MediumDef | DiffuserDef;
 
 /** One step of the reference solution: final pose of a piece. */
 export interface SolutionStep {
@@ -74,6 +119,8 @@ export interface SolutionStep {
   angle?: number;
   x?: number;
   y?: number;
+  /** Fan opening of an adjustable diffuser. */
+  spread?: number;
 }
 
 /** A level as stored in JSON. Coordinates are logical units, angles degrees. */
@@ -84,6 +131,8 @@ export interface LevelDefinition {
   board: { width: number; height: number };
   emitters: EmitterDef[];
   targets: TargetDef[];
+  /** Crystals to light (diffusion levels). */
+  crystals: CrystalDef[];
   pieces: PieceDef[];
   /** Maximum rotations (15° steps) for 3 and for 2 stars; finishing gives at least 1. */
   stars: [number, number];
@@ -220,7 +269,21 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
       passThrough: c.optionalBoolean(o, 'passThrough', path),
     });
   });
-  if (targets.length === 0) c.fail('targets', 'au moins une cible attendue');
+  const crystals = (root.crystals === undefined ? [] : c.array(root.crystals, 'crystals')).map(
+    (t, i): CrystalDef => {
+      const path = `crystals[${i}]`;
+      const o = c.object(t, path) ?? {};
+      return compact({
+        id: claimId(o, path),
+        x: inX(o, path),
+        y: inY(o, path),
+        radius: c.optionalNumber(o, 'radius', path, 4),
+        threshold: c.optionalNumber(o, 'threshold', path, 0.001),
+      });
+    },
+  );
+  if (targets.length + crystals.length === 0)
+    c.fail('targets', 'au moins une cible ou un cristal attendu');
 
   const pieces = c.array(root.pieces, 'pieces').flatMap((p, i): PieceDef[] => {
     const path = `pieces[${i}]`;
@@ -269,6 +332,32 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
         }),
       ];
     }
+    if (o.type === 'diffuser') {
+      if (base.angle % 15 !== 0) c.fail(`${path}.angle`, 'multiple de 15° attendu');
+      return [
+        compact({
+          type: 'diffuser' as const,
+          ...base,
+          length: c.optionalNumber(o, 'length', path, 10),
+          spread: c.number(o, 'spread', path, SPREAD_MIN, SPREAD_MAX),
+          rays: c.optionalNumber(o, 'rays', path, 1),
+          rotatable: c.optionalBoolean(o, 'rotatable', path),
+          movable: c.optionalBoolean(o, 'movable', path),
+          adjustable: c.optionalBoolean(o, 'adjustable', path),
+        }),
+      ];
+    }
+    if (o.type === 'fog') {
+      return [
+        {
+          type: 'fog' as const,
+          ...base,
+          width: c.number(o, 'width', path, 1),
+          height: c.number(o, 'height', path, 1),
+          density: c.number(o, 'density', path, 0, 1),
+        },
+      ];
+    }
     c.fail(`${path}.type`, `type de pièce inconnu « ${String(o.type)} »`);
     return [];
   });
@@ -285,8 +374,8 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     const o = c.object(s, path) ?? {};
     const piece = c.string(o, 'piece', path);
     const mirror = pieces.find(
-      (p): p is MirrorDef | MediumDef =>
-        (p.type === 'mirror' || p.type === 'medium') && p.id === piece,
+      (p): p is ActivePieceDef =>
+        (p.type === 'mirror' || p.type === 'medium' || p.type === 'diffuser') && p.id === piece,
     );
     if (piece && !mirror) c.fail(`${path}.piece`, `aucune pièce mobile « ${piece} »`);
     const step = compact({
@@ -294,7 +383,11 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
       angle: c.optionalNumber(o, 'angle', path),
       x: c.optionalNumber(o, 'x', path),
       y: c.optionalNumber(o, 'y', path),
+      spread: c.optionalNumber(o, 'spread', path, SPREAD_MIN),
     });
+    if (step.spread !== undefined && !(mirror?.type === 'diffuser' && mirror.adjustable === true)) {
+      c.fail(`${path}.spread`, `le dépoli de « ${piece} » n'est pas réglable`);
+    }
     if (step.angle !== undefined && step.angle % 15 !== 0)
       c.fail(`${path}.angle`, 'multiple de 15° attendu');
     if (mirror && step.angle !== undefined && mirror.rotatable === false) {
@@ -324,6 +417,7 @@ export function parseLevel(raw: unknown, source = 'niveau'): LevelDefinition {
     board,
     emitters,
     targets,
+    crystals,
     pieces,
     stars: [three, two],
     solution,
@@ -335,10 +429,18 @@ export function toEngineLevel(def: LevelDefinition): Level {
   const mirrors: Mirror[] = [];
   const walls: Wall[] = [];
   const media: Medium[] = [];
+  const diffusers: Diffuser[] = [];
+  const fogs: Fog[] = [];
   for (const p of def.pieces) {
     if (p.type === 'mirror') {
       const { type: _type, length, ...rest } = p;
       mirrors.push({ ...rest, length: length ?? DEFAULT_MIRROR_LENGTH });
+    } else if (p.type === 'diffuser') {
+      const { type: _type, length, ...rest } = p;
+      diffusers.push({ ...rest, length: length ?? DEFAULT_MIRROR_LENGTH });
+    } else if (p.type === 'fog') {
+      const { type: _type, ...rest } = p;
+      fogs.push({ ...rest });
     } else if (p.type === 'medium') {
       const { type: _type, inTray, ...rest } = p;
       media.push(inTray === true ? { ...rest, trayable: true, stored: true } : { ...rest });
@@ -359,17 +461,26 @@ export function toEngineLevel(def: LevelDefinition): Level {
     walls,
     targets,
     media,
+    diffusers,
+    fogs,
+    crystals: def.crystals.map((c) => ({
+      ...c,
+      radius: c.radius ?? DEFAULT_CRYSTAL_RADIUS,
+      threshold: c.threshold ?? DEFAULT_CRYSTAL_THRESHOLD,
+    })),
   };
 }
 
 /** Applies the reference solution to an engine level built from `def`. */
 export function applySolution(def: LevelDefinition, level: Level): Level {
   for (const step of def.solution) {
-    const m: Mirror | Medium | undefined =
+    const m: Mirror | Medium | Diffuser | undefined =
       level.mirrors.find((mirror) => mirror.id === step.piece) ??
-      level.media?.find((medium) => medium.id === step.piece);
+      level.media?.find((medium) => medium.id === step.piece) ??
+      level.diffusers?.find((d) => d.id === step.piece);
     if (!m) continue;
     if (step.angle !== undefined) m.angle = step.angle;
+    if (step.spread !== undefined && 'spread' in m) m.spread = step.spread;
     if (step.x !== undefined) m.x = step.x;
     if (step.y !== undefined) m.y = step.y;
     if ('material' in m && step.x !== undefined) m.stored = false;

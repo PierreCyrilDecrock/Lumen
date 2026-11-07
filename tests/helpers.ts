@@ -1,4 +1,14 @@
-import type { Emitter, Level, Medium, Mirror, Target, Wall } from '../src/engine';
+import type {
+  Crystal,
+  Diffuser,
+  Emitter,
+  Fog,
+  Level,
+  Medium,
+  Mirror,
+  Target,
+  Wall,
+} from '../src/engine';
 
 let nextId = 0;
 const id = (prefix: string): string => `${prefix}${nextId++}`;
@@ -49,3 +59,29 @@ export const medium = (
   material: Medium['material'],
   angle = 0,
 ): Medium => ({ id: id('n'), x, y, width, height, angle, material });
+
+export const diffuser = (
+  x: number,
+  y: number,
+  angle: number,
+  spread = 60,
+  length = 40,
+): Diffuser => ({ id: id('d'), x, y, angle, spread, length });
+
+export const crystal = (x: number, y: number, threshold = 0.06, radius = 10): Crystal => ({
+  id: id('c'),
+  x,
+  y,
+  radius,
+  threshold,
+});
+
+export const fog = (x: number, y: number, width: number, height: number, density: number): Fog => ({
+  id: id('f'),
+  x,
+  y,
+  width,
+  height,
+  angle: 0,
+  density,
+});
